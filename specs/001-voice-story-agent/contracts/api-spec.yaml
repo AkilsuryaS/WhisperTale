@@ -1,0 +1,613 @@
+openapi: "3.1.0"
+info:
+  title: Voice Story Agent for Children — API Contract
+  version: "1.0.0"
+  description: |
+    REST + WebSocket contract for the Voice Story Agent backend (FastAPI, Cloud Run).
+
+    ## Transport overview
+    - REST endpoints handle session lifecycle (create, read).
+    - A single WebSocket endpoint `/ws/story/{session_id}` carries:
+        - Inbound:  raw PCM audio frames (binary) and JSON control messages
+        - Outbound: JSON story events (transcripts, page assets, safety events, steering)
+    - All binary WebSocket frames are raw 16-bit PCM, 16 kHz mono (ADK format).
+    - All JSON WebSocket frames are described in the `WebSocket Events` section below.
+
+servers:
+  - url: https://api.voice-story-agent.run.app
+    description: Cloud Run production
+  - url: http://localhost:8000
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Firebase ID token (for MVP, anonymous auth token is sufficient)
+
+  schemas:
+
+    # ── Enumerations ──────────────────────────────────────────────────────────
+
+    SessionStatus:
+      type: string
+      enum: [setup, generating, complete, error]
+
+    PageStatus:
+      type: string
+      enum: [pending, text_ready, image_ready, audio_ready, complete, error]
+
+    Tone:
+      type: string
+      enum: [silly, sleepy, adventurous, warm, curious]
+
+    SteeringType:
+      type: string
+      enum: [tone_change, pacing_change, element_reintroduction, character_introduction]
+
+    SafetyCategory:
+      type: string
+      enum:
+        [physical_harm, character_death, gore, destruction, sexual_content, fear_escalation]
+
+    # ── Shared objects ────────────────────────────────────────────────────────
+
+    StoryPreferences:
+      type: object
+      required: [protagonist_name, protagonist_description, setting, tone]
+      properties:
+        protagonist_name:
+          type: string
+          maxLength: 80
+        protagonist_description:
+          type: string
+          maxLength: 300
+        setting:
+          type: string
+          maxLength: 200
+        tone:
+          $ref: "#/components/schemas/Tone"
+        additional_constraints:
+          type: array
+          items:
+            type: string
+
+    CharacterRef:
+      type: object
+      required: [char_id, name, description, introduced_on_page]
+      properties:
+        char_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        reference_image_url:
+          type: string
+          nullable: true
+        introduced_on_page:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    CharacterBible:
+      type: object
+      required:
+        [protagonist_name, species_or_type, color, notable_traits,
+         art_style, color_palette, mood, negative_style_terms, exclusions]
+      properties:
+        protagonist_name:
+          type: string
+        species_or_type:
+          type: string
+        color:
+          type: string
+        attire:
+          type: string
+          nullable: true
+        notable_traits:
+          type: array
+          items:
+            type: string
+          minItems: 2
+          maxItems: 4
+        reference_image_url:
+          type: string
+          nullable: true
+          description: GCS URL of page-1 illustration; null until page 1 is generated
+        art_style:
+          type: string
+        color_palette:
+          type: string
+        mood:
+          type: string
+        negative_style_terms:
+          type: array
+          items:
+            type: string
+        exclusions:
+          type: array
+          items:
+            type: string
+          description: Active content exclusion constraints applied to all generation prompts
+        secondary_characters:
+          type: array
+          items:
+            $ref: "#/components/schemas/CharacterRef"
+
+    StoryPage:
+      type: object
+      required: [page_number, status, beat, illustration_failed, audio_failed]
+      properties:
+        page_number:
+          type: integer
+          minimum: 1
+          maximum: 5
+        status:
+          $ref: "#/components/schemas/PageStatus"
+        beat:
+          type: string
+        text:
+          type: string
+          nullable: true
+        illustration_url:
+          type: string
+          nullable: true
+          description: Signed GCS URL valid for 1 hour
+        audio_url:
+          type: string
+          nullable: true
+          description: Signed GCS URL valid for 1 hour
+        illustration_failed:
+          type: boolean
+        audio_failed:
+          type: boolean
+        steering_applied:
+          type: array
+          items:
+            type: string
+        generated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    StorySession:
+      type: object
+      required: [session_id, status, created_at, updated_at, page_count, current_page]
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/SessionStatus"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        page_count:
+          type: integer
+          const: 5
+        current_page:
+          type: integer
+          minimum: 0
+          maximum: 5
+        story_arc:
+          type: array
+          items:
+            type: string
+          minItems: 5
+          maxItems: 5
+          nullable: true
+        preferences:
+          $ref: "#/components/schemas/StoryPreferences"
+          nullable: true
+        character_bible:
+          $ref: "#/components/schemas/CharacterBible"
+          nullable: true
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/StoryPage"
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+# ── REST Endpoints ────────────────────────────────────────────────────────────
+
+paths:
+
+  /sessions:
+    post:
+      operationId: createSession
+      summary: Create a new story session
+      description: |
+        Creates an empty session in Firestore with status=setup.
+        Returns the session_id to use for the WebSocket connection.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_hint:
+                  type: string
+                  description: Optional opaque client hint for logging
+      responses:
+        "201":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [session_id, ws_url]
+                properties:
+                  session_id:
+                    type: string
+                    format: uuid
+                  ws_url:
+                    type: string
+                    description: Fully-qualified WebSocket URL to connect to
+                    example: "wss://api.voice-story-agent.run.app/ws/story/{session_id}"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /sessions/{session_id}:
+    get:
+      operationId: getSession
+      summary: Retrieve full session state
+      description: |
+        Returns the current session including all pages, character bible, and
+        preferences. Used by the frontend to recover state after a WebSocket
+        reconnect.
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Session found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorySession"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /sessions/{session_id}/pages/{page_number}:
+    get:
+      operationId: getPage
+      summary: Retrieve a single story page
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page_number
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+      responses:
+        "200":
+          description: Page found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryPage"
+        "404":
+          description: Page not yet generated or session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Cloud Run health probe
+      security: []
+      responses:
+        "200":
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    const: ok
+
+# ── WebSocket Contract ────────────────────────────────────────────────────────
+#
+# Endpoint: /ws/story/{session_id}
+# Protocol: WebSocket (HTTP/1.1 Upgrade or HTTP/2)
+# Auth:     Bearer token passed as query param ?token={firebase_id_token}
+#           (Authorization header not available for WebSocket in all browsers)
+#
+# Frame types:
+#   binary  → raw PCM audio (16-bit, 16 kHz, mono) flowing Client → Server
+#   text    → UTF-8 JSON messages in both directions
+#
+# All JSON messages have a required top-level "type" discriminator field.
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-websocket-events:
+  description: |
+    All WebSocket JSON message schemas. Direction: C=Client→Server, S=Server→Client.
+
+  client_messages:
+
+    audio_chunk:
+      direction: C
+      description: |
+        Streaming PCM audio from the browser microphone.
+        Send as binary frames, not JSON. Included here for documentation completeness.
+      fields:
+        type: "audio_chunk"
+        data:
+          type: string
+          format: base64
+          description: Base64-encoded raw PCM bytes (16-bit, 16 kHz, mono)
+
+    ping:
+      direction: C
+      description: Keepalive ping
+      fields:
+        type: "ping"
+
+  server_messages:
+
+    connected:
+      direction: S
+      description: Sent immediately after WebSocket handshake completes
+      fields:
+        type: "connected"
+        session_id:
+          type: string
+          format: uuid
+        session_status:
+          $ref: "#/components/schemas/SessionStatus"
+
+    transcript:
+      direction: S
+      description: Real-time speech transcript for caption rendering
+      fields:
+        type: "transcript"
+        role:
+          type: string
+          enum: [user, agent]
+        text:
+          type: string
+        is_final:
+          type: boolean
+          description: |
+            false while streaming partial transcripts;
+            true when the utterance is complete
+
+    setup_complete:
+      direction: S
+      description: Emitted when the agent has confirmed all story parameters
+      fields:
+        type: "setup_complete"
+        session_id:
+          type: string
+          format: uuid
+        preferences:
+          $ref: "#/components/schemas/StoryPreferences"
+        character_bible_summary:
+          type: string
+          description: Human-readable summary of the character bible for display
+
+    safety_rewrite:
+      direction: S
+      description: |
+        Emitted when the safety middleware detects forbidden content.
+        The agent simultaneously voices the proposed_rewrite via ADK audio.
+      fields:
+        type: "safety_rewrite"
+        safety_event_id:
+          type: string
+          format: uuid
+        detected_category:
+          $ref: "#/components/schemas/SafetyCategory"
+        proposed_rewrite:
+          type: string
+          description: Child-safe alternative proposal (never contains the original unsafe content)
+
+    safety_accepted:
+      direction: S
+      description: Emitted when the user has acknowledged the safety rewrite
+      fields:
+        type: "safety_accepted"
+        safety_event_id:
+          type: string
+          format: uuid
+        final_premise:
+          type: string
+
+    page_generating:
+      direction: S
+      description: |
+        Emitted when the backend begins generating a new page.
+        Frontend MUST show HoldAnimation and play hold phrase audio.
+      fields:
+        type: "page_generating"
+        page:
+          type: integer
+          minimum: 1
+          maximum: 5
+
+    page_text_ready:
+      direction: S
+      description: Story text for this page is available
+      fields:
+        type: "page_text_ready"
+        page:
+          type: integer
+        text:
+          type: string
+
+    page_image_ready:
+      direction: S
+      description: Illustration is available
+      fields:
+        type: "page_image_ready"
+        page:
+          type: integer
+        image_url:
+          type: string
+          description: Signed GCS URL, valid 1 hour
+
+    page_audio_ready:
+      direction: S
+      description: Narration audio is available; frontend SHOULD auto-play
+      fields:
+        type: "page_audio_ready"
+        page:
+          type: integer
+        audio_url:
+          type: string
+          description: Signed GCS URL, valid 1 hour
+
+    page_asset_failed:
+      direction: S
+      description: |
+        One asset could not be generated. Session continues.
+        Frontend MUST show graceful fallback (placeholder image or text-only).
+      fields:
+        type: "page_asset_failed"
+        page:
+          type: integer
+        asset:
+          type: string
+          enum: [image, audio]
+        reason:
+          type: string
+
+    page_complete:
+      direction: S
+      description: |
+        All assets for this page have been delivered (or gracefully failed).
+        Frontend MUST dismiss HoldAnimation and render the full page.
+      fields:
+        type: "page_complete"
+        page:
+          type: integer
+        illustration_failed:
+          type: boolean
+        audio_failed:
+          type: boolean
+
+    steering_window_open:
+      direction: S
+      description: |
+        Narration for the last page has ended. 
+        The agent is now listening for a steering command.
+        Frontend SHOULD show a subtle "you can speak" indicator.
+      fields:
+        type: "steering_window_open"
+        page_just_completed:
+          type: integer
+        timeout_ms:
+          type: integer
+          description: Duration of steering window (always 10000 ms for MVP)
+
+    steering_received:
+      direction: S
+      description: Steering command heard; being processed
+      fields:
+        type: "steering_received"
+        command_id:
+          type: string
+          format: uuid
+        raw_transcript:
+          type: string
+        interpreted_as:
+          type: string
+
+    steering_applied:
+      direction: S
+      description: Steering command has been applied to remaining pages
+      fields:
+        type: "steering_applied"
+        command_id:
+          type: string
+          format: uuid
+        steering_type:
+          $ref: "#/components/schemas/SteeringType"
+        pages_affected:
+          type: array
+          items:
+            type: integer
+
+    steering_window_closed:
+      direction: S
+      description: Steering window has timed out or been closed; next page generation begins
+      fields:
+        type: "steering_window_closed"
+        reason:
+          type: string
+          enum: [timeout, steering_applied, user_silent]
+
+    story_complete:
+      direction: S
+      description: All 5 pages delivered; session status is now complete
+      fields:
+        type: "story_complete"
+        session_id:
+          type: string
+          format: uuid
+        page_count:
+          type: integer
+          const: 5
+
+    session_error:
+      direction: S
+      description: |
+        Unrecoverable error. WebSocket will close after this message.
+        Frontend SHOULD offer a restart option.
+      fields:
+        type: "session_error"
+        code:
+          type: string
+        message:
+          type: string
+
+    pong:
+      direction: S
+      description: Response to client ping
+      fields:
+        type: "pong"
