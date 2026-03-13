@@ -156,6 +156,7 @@ Include `model_config = ConfigDict(use_enum_values=True)`.
 ### T-005 · Pydantic models: CharacterBible, StyleBible, ContentPolicy, CharacterRef
 
 **Priority**: P1
+**Status**: ✅ Done — `app/models/character_bible.py` created with `ProtagonistProfile`, `StyleBible`, `ContentPolicy`, `CharacterRef`, `CharacterBible`. notable_traits 2–4 bound + non-empty validator, introduced_on_page 1–5 bound. All models exported from `app/models/__init__.py`. 34 new tests (102 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/models/character_bible.py`
 
@@ -179,6 +180,7 @@ Define:
 ### T-006 · Pydantic models: Page, PageAsset, VoiceCommand, SafetyDecision
 
 **Priority**: P1
+**Status**: ✅ Done — `app/models/page.py`, `app/models/voice_command.py`, `app/models/safety.py` created. PageStatus/AssetType/AssetStatus/CommandType/SafetyCategory/SafetyPhase enums defined. SafetyResult dataclass and SAFE_FALLBACK_REWRITE constant added. SafetyPhase restricted to setup|steering (not narration). All symbols exported from __init__.py. 77 new tests (179 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/models/page.py`
 - `voice-story-agent/backend/app/models/voice_command.py`
