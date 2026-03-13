@@ -156,6 +156,7 @@ Include `model_config = ConfigDict(use_enum_values=True)`.
 ### T-005 · Pydantic models: CharacterBible, StyleBible, ContentPolicy, CharacterRef
 
 **Priority**: P1
+**Status**: ✅ Done — `app/models/character_bible.py` created with `ProtagonistProfile`, `StyleBible`, `ContentPolicy`, `CharacterRef`, `CharacterBible`. notable_traits 2–4 bound + non-empty validator, introduced_on_page 1–5 bound. All models exported from `app/models/__init__.py`. 34 new tests (102 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/models/character_bible.py`
 
