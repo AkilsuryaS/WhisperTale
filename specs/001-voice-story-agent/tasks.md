@@ -127,6 +127,7 @@ The script should:
 ### T-004 · Pydantic models: Session, StoryBrief, UserTurn
 
 **Priority**: P1
+**Status**: ✅ Done — `app/models/session.py` created with `Session`, `UserTurn`, `StoryBrief`, `SessionStatus`, `TurnPhase`, `Speaker`, `Tone` enums. All field validators (page_count=5, story_arc non-empty, max_length) verified. Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/models/session.py`
 
