@@ -224,6 +224,7 @@ unavailable. It is child-safe, warm, and actionable as a story premise.
 ### T-007 · SessionStore — Session + StoryBrief + UserTurn CRUD
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/session_store.py` implemented with all 8 methods. `SessionNotFoundError` in `app/exceptions.py`. Firestore client injected via constructor for testability. 22 mock-based tests (201 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/session_store.py`
 
