@@ -37,8 +37,7 @@ instead of reproducing unsafe details. Safety policy checks and rewrite behavior
 MUST execute before story generation, image prompts, and narration synthesis.
 
 ### II. Voice-First UX with Captions
-Primary interaction MUST be bidirectional voice implemented with ADK
-bidi-streaming and Gemini Live. The application MUST simultaneously present text
+Primary interaction MUST be bidirectional voice using ADK bidi-streaming with Gemini Live-compatible session orchestration. The application MUST simultaneously present text
 captions for prompts and responses to support accessibility, comprehension, and
 caregiver transparency.
 

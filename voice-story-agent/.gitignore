@@ -1,0 +1,16 @@
+# Credentials — NEVER commit
+.credentials/
+*-key.json
+*-sa.json
+sa-key.json
+service-account*.json
+backend/.env
+frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

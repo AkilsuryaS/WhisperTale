@@ -12,8 +12,9 @@
 **Rationale**:
 - ADK provides a first-class Python SDK for bidirectional audio streaming with Gemini Live,
   enabling sub-second voice turn-taking without polling.
-- The Gemini Live Agent Challenge explicitly rewards ADK + Gemini Live usage — using this
-  stack satisfies hackathon rule V (Cloud Compliance and Rule Traceability) directly.
+- The project targets the **Creative Storyteller** hackathon category. ADK + Gemini Live
+  satisfies the category's interleaved multimodal storytelling requirement (voice input +
+  page text + illustration + narration) and hackathon rule V (Cloud Compliance) directly.
 - ADK sessions are stateful: the agent context (system prompt, conversation history) persists
   across audio turns within a session, making it natural to hold the character bible and
   content exclusions in the system prompt.
@@ -237,13 +238,16 @@ gs://{project}-story-assets/
 
 ## 8. Hosting and Deployment
 
-**Decision**: Cloud Run (backend FastAPI) + Firebase Hosting (Next.js frontend)
+**Decision**: Cloud Run (backend FastAPI) + Firebase App Hosting (Next.js frontend)
 
 **Rationale**:
 - Cloud Run: fully managed, auto-scales from zero, HTTPS by default, GCP-native.
   WebSocket support is available (HTTP/2 or HTTP/1.1 upgrade with `--session-affinity`).
-- Firebase Hosting: GCP-native, CDN-backed, integrates with Firebase SDK for
-  Firestore real-time listeners on the frontend.
+- Firebase App Hosting: GCP-native, purpose-built for Next.js SSR (handles server
+  components, API routes, and ISR natively without a static export step), CDN-backed,
+  integrates with Firebase SDK for Firestore real-time listeners on the frontend.
+  Legacy Firebase Hosting (static export) remains an alternative path but requires
+  `output: "export"` in `next.config.ts`, which disables SSR and App Router features.
 - Both satisfy hackathon rule V.
 
 **Cloud Run configuration notes**:

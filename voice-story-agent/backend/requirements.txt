@@ -1,0 +1,26 @@
+# Voice Story Agent — Backend Dependencies
+# Python 3.11+
+
+# Web framework
+fastapi==0.115.5
+uvicorn[standard]==0.34.0
+
+# Config / env
+pydantic==2.10.4
+pydantic-settings==2.7.0
+python-dotenv==1.0.1
+
+# Google Cloud SDKs
+google-cloud-aiplatform>=1.82.0
+google-generativeai>=0.8.4
+google-cloud-firestore>=2.20.0
+google-cloud-storage>=2.19.0
+google-cloud-texttospeech>=2.21.0
+
+# Google ADK (bidi-streaming Gemini Live)
+google-adk>=1.0.0
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0
+httpx==0.28.1
