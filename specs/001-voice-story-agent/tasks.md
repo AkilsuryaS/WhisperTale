@@ -180,6 +180,7 @@ Define:
 ### T-006 · Pydantic models: Page, PageAsset, VoiceCommand, SafetyDecision
 
 **Priority**: P1
+**Status**: ✅ Done — `app/models/page.py`, `app/models/voice_command.py`, `app/models/safety.py` created. PageStatus/AssetType/AssetStatus/CommandType/SafetyCategory/SafetyPhase enums defined. SafetyResult dataclass and SAFE_FALLBACK_REWRITE constant added. SafetyPhase restricted to setup|steering (not narration). All symbols exported from __init__.py. 77 new tests (179 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/models/page.py`
 - `voice-story-agent/backend/app/models/voice_command.py`
