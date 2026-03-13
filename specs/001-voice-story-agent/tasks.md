@@ -293,6 +293,7 @@ Firestore paths: `sessions/{id}/pages/{n}` and `sessions/{id}/pages/{n}/assets/{
 ### T-009 · SessionStore — VoiceCommand + SafetyDecision + CharacterBible CRUD
 
 **Priority**: P1
+**Status**: ✅ Done — `session_store.py` extended with 9 methods. save_character_bible writes CharacterBible+StyleBible in a single Firestore batch. update_character_bible_field supports dot-notation field paths. 24 mock-based tests (249 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/session_store.py` (extend)
 
