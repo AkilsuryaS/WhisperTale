@@ -12,6 +12,7 @@ Test tasks carry a `TEST-` prefix and are colocated with the feature tasks they 
 - **ID**: stable reference used in dependency lists
 - **Phase**: logical grouping (scaffold, data, ws, safety, setup, pages, consistency, steering, memory, frontend, deploy)
 - **Priority**: P1 | P2 | P3
+- **Status**: `✅ Done` | `🔄 In Progress` | `⬜ Not Started`
 - **Files**: primary files created or significantly modified
 - **Depends**: IDs that must be complete first
 
@@ -38,6 +39,7 @@ The demo story experience — voice setup, 5-page generation, character consiste
 ### T-001 · Monorepo root + backend scaffold
 
 **Priority**: P1
+**Status**: ✅ Done — PR #2 merged. `backend/` scaffold, `config.py`, `main.py`, `Dockerfile`, `.env.example` all verified. `GET /health` returns `{"status":"ok"}` with zero credentials.
 **Files**:
 - `voice-story-agent/backend/requirements.txt`
 - `voice-story-agent/backend/app/main.py`
@@ -64,6 +66,7 @@ Create the monorepo root directory. Scaffold the FastAPI backend:
 ### T-002 · Frontend scaffold (Next.js 14 + Tailwind)
 
 **Priority**: P1
+**Status**: ✅ Done — PR #2 merged. `frontend/` scaffold with Next.js 14, Tailwind, `/story` stub. `npm run build` passes cleanly. `.env.local.example` created.
 **Files**:
 - `voice-story-agent/frontend/package.json`
 - `voice-story-agent/frontend/next.config.ts`
@@ -89,6 +92,7 @@ Bootstrap Next.js 14 app with TypeScript and Tailwind CSS. Root page redirects t
 ### T-003 · Google Cloud project config + IAM
 
 **Priority**: P1
+**Status**: ✅ Done — PR #3 open. `infra/setup.sh` verified against `whispertale-dev`: APIs enabled, Firestore created, GCS bucket created, service account + IAM roles provisioned, SA key saved to `.credentials/sa-key.json`.
 **Files**:
 - `voice-story-agent/infra/setup.sh`
 - `voice-story-agent/infra/README.md`
