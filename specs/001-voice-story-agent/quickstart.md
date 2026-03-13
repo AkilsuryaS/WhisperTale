@@ -222,28 +222,44 @@ for ROLE in \
 done
 ```
 
-### 6c. Deploy Frontend to Firebase Hosting
+### 6c. Deploy Frontend to Firebase App Hosting (Primary)
 
-Update `frontend/.env.production`:
-```
-NEXT_PUBLIC_API_URL=https://voice-story-agent-backend-xxx-uc.a.run.app
-NEXT_PUBLIC_WS_URL=wss://voice-story-agent-backend-xxx-uc.a.run.app
-```
+Firebase App Hosting handles Next.js SSR natively with no static-export step required.
 
 ```bash
-cd frontend
-npm run build
-
 firebase login
-firebase init hosting   # select existing Firebase project
-firebase deploy --only hosting
+firebase init apphosting   # select existing Firebase project; link to Cloud Run backend env
 ```
 
-Firebase Hosting URL will be displayed (e.g., `https://your-project.web.app`).
+Set the backend URL in the App Hosting environment config (Firebase Console → App Hosting
+→ Environment variables) or via `apphosting.yaml` in the `frontend/` directory:
+```yaml
+# frontend/apphosting.yaml
+env:
+  - variable: NEXT_PUBLIC_API_URL
+    value: https://voice-story-agent-backend-xxx-uc.a.run.app
+  - variable: NEXT_PUBLIC_WS_URL
+    value: wss://voice-story-agent-backend-xxx-uc.a.run.app
+```
+
+Push to the connected Git branch to trigger an automatic build and deploy.
+
+App Hosting URL will be displayed in the Firebase Console
+(e.g., `https://your-project.web.app`).
+
+> **Alternative**: If App Hosting is unavailable in your region, you can fall back to
+> legacy Firebase Hosting with a static export:
+> ```bash
+> # In next.config.ts add: output: "export"
+> npm run build          # generates out/
+> firebase init hosting
+> firebase deploy --only hosting
+> ```
+> Static export disables SSR and App Router server components; use only as a fallback.
 
 ### 6d. Update CORS
 
-Set `CORS_ORIGINS` on Cloud Run to match your Firebase Hosting URL:
+Set `CORS_ORIGINS` on Cloud Run to match your App Hosting URL:
 ```bash
 gcloud run services update voice-story-agent-backend \
   --region us-central1 \
@@ -263,7 +279,7 @@ curl -X POST https://voice-story-agent-backend-xxx-uc.a.run.app/sessions
 # → {"session_id": "...", "ws_url": "wss://..."}
 ```
 
-Open your Firebase Hosting URL in Chrome and run the full 5-page demo.
+Open your Firebase App Hosting URL in Chrome and run the full 5-page demo.
 
 ---
 
@@ -296,4 +312,4 @@ session_created → setup_complete → safety_triggered (if applicable)
 | TTS returns empty audio | Voice name not available in region | Change `TTS_VOICE_NAME` to `en-US-Wavenet-F` |
 | Cloud Run cold start on first request | `--min-instances` not set | Set `--min-instances=1` for demo |
 | Page image fails silently | GCS bucket CORS not configured | `gcloud storage buckets update gs://... --cors-file=cors.json` |
-| ADK session drops mid-narration | Cloud Run default timeout (60 s) hit | Set `--timeout=300` on Cloud Run |
+| ADK session drops mid-conversation | Cloud Run default timeout (60 s) hit | Set `--timeout=300` on Cloud Run (note: page narration audio is served from Cloud Storage via signed URL — ADK session drop only affects conversational voice, not narration playback) |

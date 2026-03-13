@@ -1,0 +1,13 @@
+# Next.js build output
+.next/
+out/
+
+# Dependencies
+node_modules/
+
+# Env files with real values — never commit these
+.env.local
+.env.production
+
+# OS
+.DS_Store
