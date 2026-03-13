@@ -259,6 +259,7 @@ serialisation/deserialisation is internal.
 ### T-008 · SessionStore — Page + PageAsset CRUD
 
 **Priority**: P1
+**Status**: ✅ Done — `session_store.py` extended with 7 methods: save_page, get_page, list_pages, save_page_asset, get_page_asset, list_page_assets, update_page_asset_status. Document IDs are str(page_number) and asset_type. update_page_asset_status sets generated_at on ready/failed only. 24 mock-based tests (225 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/session_store.py` (extend)
 

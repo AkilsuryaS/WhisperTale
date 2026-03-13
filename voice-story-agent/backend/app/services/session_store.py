@@ -1,10 +1,13 @@
 """
-SessionStore — Firestore-backed persistence for Session, StoryBrief, and UserTurn.
+SessionStore — Firestore-backed persistence for Session, StoryBrief, UserTurn,
+Page, and PageAsset.
 
 Firestore paths (data-model.md):
-    sessions/{session_id}                       ← Session document
-    sessions/{session_id}/story_brief/main      ← StoryBrief document
-    sessions/{session_id}/turns/{turn_id}       ← UserTurn document
+    sessions/{session_id}                                  ← Session document
+    sessions/{session_id}/story_brief/main                 ← StoryBrief document
+    sessions/{session_id}/turns/{turn_id}                  ← UserTurn document
+    sessions/{session_id}/pages/{page_number}              ← Page document
+    sessions/{session_id}/pages/{page_number}/assets/{type}← PageAsset document
 
 All public methods accept and return Pydantic models; Firestore
 serialisation/deserialisation is encapsulated here.
@@ -25,6 +28,7 @@ from google.cloud.firestore_v1.async_client import AsyncClient
 
 from app.config import settings
 from app.exceptions import SessionNotFoundError
+from app.models.page import AssetStatus, AssetType, Page, PageAsset
 from app.models.session import Session, SessionStatus, StoryBrief, UserTurn
 
 
@@ -89,6 +93,40 @@ class SessionStore:
             self._client.collection("sessions")
             .document(session_id)
             .collection("turns")
+        )
+
+    def _page_ref(self, session_id: str, page_number: int):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("pages")
+            .document(str(page_number))
+        )
+
+    def _pages_collection(self, session_id: str):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("pages")
+        )
+
+    def _asset_ref(self, session_id: str, page_number: int, asset_type: str):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("pages")
+            .document(str(page_number))
+            .collection("assets")
+            .document(asset_type)
+        )
+
+    def _assets_collection(self, session_id: str, page_number: int):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("pages")
+            .document(str(page_number))
+            .collection("assets")
         )
 
     # ------------------------------------------------------------------
@@ -175,3 +213,81 @@ class SessionStore:
         query = self._turns_collection(session_id).order_by("sequence")
         docs = await query.get()
         return [UserTurn.model_validate(doc.to_dict()) for doc in docs]
+
+    # ------------------------------------------------------------------
+    # Page
+    # ------------------------------------------------------------------
+
+    async def save_page(self, session_id: str, page: Page) -> None:
+        """Write (or overwrite) a Page document. Document ID is the page_number string."""
+        data = _to_firestore(page)
+        await self._page_ref(session_id, page.page_number).set(data)
+
+    async def get_page(self, session_id: str, page_number: int) -> Page | None:
+        """Return the Page for page_number, or None if it has not been saved yet."""
+        doc = await self._page_ref(session_id, page_number).get()
+        if not doc.exists:
+            return None
+        return Page.model_validate(doc.to_dict())
+
+    async def list_pages(self, session_id: str) -> list[Page]:
+        """
+        Return all Pages for session_id, ordered by page_number ascending.
+        Returns an empty list if no pages have been saved yet.
+        """
+        query = self._pages_collection(session_id).order_by("page_number")
+        docs = await query.get()
+        return [Page.model_validate(doc.to_dict()) for doc in docs]
+
+    # ------------------------------------------------------------------
+    # PageAsset
+    # ------------------------------------------------------------------
+
+    async def save_page_asset(self, session_id: str, asset: PageAsset) -> None:
+        """Write (or overwrite) a PageAsset document. Document ID is the asset_type string."""
+        data = _to_firestore(asset)
+        asset_type = asset.asset_type if isinstance(asset.asset_type, str) else asset.asset_type.value
+        await self._asset_ref(session_id, asset.page_number, asset_type).set(data)
+
+    async def get_page_asset(
+        self, session_id: str, page_number: int, asset_type: AssetType
+    ) -> PageAsset | None:
+        """Return the PageAsset for (page_number, asset_type), or None if not saved yet."""
+        type_str = asset_type if isinstance(asset_type, str) else asset_type.value
+        doc = await self._asset_ref(session_id, page_number, type_str).get()
+        if not doc.exists:
+            return None
+        return PageAsset.model_validate(doc.to_dict())
+
+    async def list_page_assets(
+        self, session_id: str, page_number: int
+    ) -> list[PageAsset]:
+        """
+        Return both PageAssets (illustration + narration) for a page.
+        Returns an empty list if no assets have been saved yet.
+        """
+        docs = await self._assets_collection(session_id, page_number).get()
+        return [PageAsset.model_validate(doc.to_dict()) for doc in docs]
+
+    async def update_page_asset_status(
+        self,
+        session_id: str,
+        page_number: int,
+        asset_type: AssetType,
+        status: AssetStatus,
+        gcs_uri: str | None = None,
+    ) -> None:
+        """
+        Update generation_status (and optionally gcs_uri + generated_at) on a PageAsset.
+        Sets generated_at to UTC now when transitioning to ready or failed.
+        """
+        type_str = asset_type if isinstance(asset_type, str) else asset_type.value
+        status_str = status if isinstance(status, str) else status.value
+        payload: dict = {
+            "generation_status": status_str,
+        }
+        if gcs_uri is not None:
+            payload["gcs_uri"] = gcs_uri
+        if status_str in ("ready", "failed"):
+            payload["generated_at"] = _utc_now().isoformat()
+        await self._asset_ref(session_id, page_number, type_str).update(payload)
