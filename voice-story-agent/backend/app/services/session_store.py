@@ -1,13 +1,16 @@
 """
-SessionStore — Firestore-backed persistence for Session, StoryBrief, UserTurn,
-Page, and PageAsset.
+SessionStore — Firestore-backed persistence for all session sub-documents.
 
 Firestore paths (data-model.md):
-    sessions/{session_id}                                  ← Session document
-    sessions/{session_id}/story_brief/main                 ← StoryBrief document
-    sessions/{session_id}/turns/{turn_id}                  ← UserTurn document
-    sessions/{session_id}/pages/{page_number}              ← Page document
-    sessions/{session_id}/pages/{page_number}/assets/{type}← PageAsset document
+    sessions/{session_id}                                       ← Session
+    sessions/{session_id}/story_brief/main                      ← StoryBrief
+    sessions/{session_id}/turns/{turn_id}                       ← UserTurn
+    sessions/{session_id}/pages/{page_number}                   ← Page
+    sessions/{session_id}/pages/{page_number}/assets/{type}     ← PageAsset
+    sessions/{session_id}/voice_commands/{command_id}           ← VoiceCommand
+    sessions/{session_id}/safety_decisions/{decision_id}        ← SafetyDecision
+    sessions/{session_id}/character_bible/main                  ← CharacterBible
+    sessions/{session_id}/style_bible/main                      ← StyleBible
 
 All public methods accept and return Pydantic models; Firestore
 serialisation/deserialisation is encapsulated here.
@@ -28,8 +31,11 @@ from google.cloud.firestore_v1.async_client import AsyncClient
 
 from app.config import settings
 from app.exceptions import SessionNotFoundError
+from app.models.character_bible import CharacterBible, StyleBible
 from app.models.page import AssetStatus, AssetType, Page, PageAsset
+from app.models.safety import SafetyDecision
 from app.models.session import Session, SessionStatus, StoryBrief, UserTurn
+from app.models.voice_command import VoiceCommand
 
 
 def _utc_now() -> datetime:
@@ -127,6 +133,52 @@ class SessionStore:
             .collection("pages")
             .document(str(page_number))
             .collection("assets")
+        )
+
+    def _voice_command_ref(self, session_id: str, command_id: str):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("voice_commands")
+            .document(command_id)
+        )
+
+    def _voice_commands_collection(self, session_id: str):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("voice_commands")
+        )
+
+    def _safety_decision_ref(self, session_id: str, decision_id: str):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("safety_decisions")
+            .document(decision_id)
+        )
+
+    def _safety_decisions_collection(self, session_id: str):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("safety_decisions")
+        )
+
+    def _character_bible_ref(self, session_id: str):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("character_bible")
+            .document("main")
+        )
+
+    def _style_bible_ref(self, session_id: str):
+        return (
+            self._client.collection("sessions")
+            .document(session_id)
+            .collection("style_bible")
+            .document("main")
         )
 
     # ------------------------------------------------------------------
@@ -291,3 +343,97 @@ class SessionStore:
         if status_str in ("ready", "failed"):
             payload["generated_at"] = _utc_now().isoformat()
         await self._asset_ref(session_id, page_number, type_str).update(payload)
+
+    # ------------------------------------------------------------------
+    # VoiceCommand
+    # ------------------------------------------------------------------
+
+    async def save_voice_command(self, session_id: str, cmd: VoiceCommand) -> None:
+        """Write (or overwrite) a VoiceCommand document. Document ID = command_id."""
+        data = _to_firestore(cmd)
+        await self._voice_command_ref(session_id, str(cmd.command_id)).set(data)
+
+    async def list_voice_commands(self, session_id: str) -> list[VoiceCommand]:
+        """
+        Return all VoiceCommands for session_id ordered by received_at ascending.
+        Returns an empty list if none have been saved yet.
+        """
+        query = self._voice_commands_collection(session_id).order_by("received_at")
+        docs = await query.get()
+        return [VoiceCommand.model_validate(doc.to_dict()) for doc in docs]
+
+    # ------------------------------------------------------------------
+    # SafetyDecision
+    # ------------------------------------------------------------------
+
+    async def save_safety_decision(
+        self, session_id: str, decision: SafetyDecision
+    ) -> None:
+        """Write (or overwrite) a SafetyDecision document. Document ID = decision_id."""
+        data = _to_firestore(decision)
+        await self._safety_decision_ref(session_id, str(decision.decision_id)).set(data)
+
+    async def list_safety_decisions(self, session_id: str) -> list[SafetyDecision]:
+        """
+        Return all SafetyDecisions for session_id ordered by triggered_at ascending.
+        Returns an empty list if none have been saved yet.
+        """
+        query = self._safety_decisions_collection(session_id).order_by("triggered_at")
+        docs = await query.get()
+        return [SafetyDecision.model_validate(doc.to_dict()) for doc in docs]
+
+    # ------------------------------------------------------------------
+    # CharacterBible + StyleBible
+    # ------------------------------------------------------------------
+
+    async def save_character_bible(
+        self, session_id: str, bible: CharacterBible
+    ) -> None:
+        """
+        Write CharacterBible and StyleBible atomically in a single Firestore batch.
+
+        Paths written:
+            sessions/{id}/character_bible/main  ← full CharacterBible (including embedded style_bible)
+            sessions/{id}/style_bible/main      ← standalone StyleBible (kept in sync for independent reads)
+        """
+        batch = self._client.batch()
+        batch.set(self._character_bible_ref(session_id), _to_firestore(bible))
+        batch.set(self._style_bible_ref(session_id), _to_firestore(bible.style_bible))
+        await batch.commit()
+
+    async def get_character_bible(self, session_id: str) -> CharacterBible | None:
+        """Return the CharacterBible for session_id, or None if not yet saved."""
+        doc = await self._character_bible_ref(session_id).get()
+        if not doc.exists:
+            return None
+        return CharacterBible.model_validate(doc.to_dict())
+
+    async def update_character_bible_field(
+        self, session_id: str, field: str, value: Any
+    ) -> None:
+        """
+        Update a single field (or nested field) on the CharacterBible document.
+
+        `field` accepts dot-notation for nested maps, e.g.:
+            "content_policy.exclusions"
+            "protagonist.reference_image_gcs_uri"
+
+        Firestore merges the update so unrelated fields are preserved.
+        """
+        await self._character_bible_ref(session_id).update({field: value})
+
+    async def save_style_bible(self, session_id: str, style: StyleBible) -> None:
+        """
+        Write (or overwrite) the standalone StyleBible document.
+        Use this when only mood is being updated (tone-change VoiceCommand).
+        For initial creation, prefer save_character_bible which writes both atomically.
+        """
+        data = _to_firestore(style)
+        await self._style_bible_ref(session_id).set(data)
+
+    async def get_style_bible(self, session_id: str) -> StyleBible | None:
+        """Return the StyleBible for session_id, or None if not yet saved."""
+        doc = await self._style_bible_ref(session_id).get()
+        if not doc.exists:
+            return None
+        return StyleBible.model_validate(doc.to_dict())
