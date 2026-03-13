@@ -17,11 +17,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import sessions
+from app.routers import pages, sessions
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +49,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Exception handlers ────────────────────────────────────────────────────────
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """Normalise all HTTPException responses to {"error": "..."} envelope."""
+    if isinstance(exc.detail, dict):
+        content = exc.detail
+    else:
+        content = {"error": exc.detail}
+    return JSONResponse(status_code=exc.status_code, content=content)
+
+
 # ── Routers ───────────────────────────────────────────────────────────────────
 
 app.include_router(sessions.router)
+app.include_router(pages.router)
 
 # WebSocket router will be mounted at /ws/story/{session_id} in T-012.
 
