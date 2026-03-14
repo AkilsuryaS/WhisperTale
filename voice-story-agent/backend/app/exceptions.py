@@ -51,3 +51,11 @@ class CharacterBibleServiceError(Exception):
     def __init__(self, message: str, cause: Exception | None = None) -> None:
         super().__init__(message)
         self.cause = cause
+
+
+class ImageGenerationError(Exception):
+    """Raised when ImageGenerationService.generate fails after all retries."""
+
+    def __init__(self, message: str, cause: Exception | None = None) -> None:
+        super().__init__(message)
+        self.cause = cause
