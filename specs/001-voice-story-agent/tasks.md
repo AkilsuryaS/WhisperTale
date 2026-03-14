@@ -711,8 +711,11 @@ In the `_turn_loop`, for every `is_final=True` user turn:
 ### T-018 · StoryPlannerService — create_arc
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/story_planner.py` implemented with `create_arc(brief: StoryBrief, bible: CharacterBible) -> list[str]`. Single Gemini 2.5 Pro call with `response_mime_type="application/json"` and a detailed system prompt defining narrative structure (opening p1, complication p2, rising action p3, climax p4, resolution p5). `_build_prompt` injects protagonist, setting, tone, and all `ContentPolicy.exclusions` as hard constraints. `_validate_beats` validates the response: must be a list of exactly 5 non-empty strings. Retry schedule: Pro → Pro → Flash (3 total attempts); raises `StoryPlannerError` on total failure. `StoryPlannerError` added to `app/exceptions.py`. Injectable `genai.Client` for testability. 30 mock-based tests (517 total passing, 30 integration tests deselected). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/story_planner.py`
+- `voice-story-agent/backend/app/exceptions.py` (add StoryPlannerError)
+- `voice-story-agent/backend/tests/test_t018_story_planner.py`
 
 **Description**:
 Implement:
