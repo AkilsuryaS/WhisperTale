@@ -58,6 +58,8 @@ class Settings(BaseSettings):
 
     # ── ADK ───────────────────────────────────────────────────────────────
     ADK_AGENT_NAME: str = "voice-story-agent"
+    # Gemini Live API requires "global" region; falls back to GCP_REGION if unset
+    GEMINI_LIVE_REGION: str = "global"
 
     # ── Server ────────────────────────────────────────────────────────────
     CORS_ORIGINS: str = "http://localhost:3000"

@@ -72,7 +72,7 @@ def _build_client() -> genai.Client:
     return genai.Client(
         vertexai=True,
         project=project_id,
-        location=settings.GCP_REGION,
+        location=settings.GEMINI_LIVE_REGION,
     )
 
 
