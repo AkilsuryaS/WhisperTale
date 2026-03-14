@@ -63,6 +63,11 @@ export interface WsClientOptions {
    * Defaults to the global `WebSocket` constructor.
    */
   _factory?: (url: string) => WebSocket;
+  /**
+   * Called when all reconnect attempts have been exhausted (retryCount >= maxRetries)
+   * and the WebSocket closes without a successful reconnect.
+   */
+  onMaxRetriesExhausted?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +89,7 @@ export class WsClient {
   private readonly _maxRetries: number;
   private readonly _reconnectBaseMs: number;
   private readonly _factory: (url: string) => WebSocket;
+  private readonly _onMaxRetriesExhausted: (() => void) | undefined;
 
   /** Registered event-type → handler map.  Keyed by type string. */
   private readonly _handlers: Map<string, EventHandler<WsServerEvent["type"]>>;
@@ -102,6 +108,7 @@ export class WsClient {
     this._maxRetries = opts.maxRetries ?? DEFAULT_MAX_RETRIES;
     this._reconnectBaseMs = opts.reconnectBaseMs ?? DEFAULT_RECONNECT_BASE_MS;
     this._factory = opts._factory ?? ((url: string) => new WebSocket(url));
+    this._onMaxRetriesExhausted = opts.onMaxRetriesExhausted;
     this._handlers = new Map();
   }
 
@@ -261,6 +268,9 @@ export class WsClient {
           this._openSocket();
         }
       }, delayMs);
+    } else {
+      // All retries exhausted — notify the caller.
+      this._onMaxRetriesExhausted?.();
     }
   };
 
