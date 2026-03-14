@@ -19,3 +19,19 @@ class MediaPersistenceError(Exception):
     def __init__(self, message: str, cause: Exception | None = None) -> None:
         super().__init__(message)
         self.cause = cause
+
+
+class VoiceSessionNotFoundError(Exception):
+    """Raised when send_audio/end is called for a session that is not open."""
+
+    def __init__(self, session_id: str) -> None:
+        super().__init__(f"Voice session not open: {session_id}")
+        self.session_id = session_id
+
+
+class VoiceSessionError(Exception):
+    """Raised when an ADK / Gemini Live API call fails in VoiceSessionService."""
+
+    def __init__(self, message: str, cause: Exception | None = None) -> None:
+        super().__init__(message)
+        self.cause = cause

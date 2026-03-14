@@ -394,6 +394,7 @@ All endpoints validate path parameters and return the `Error` schema on failure.
 ### T-012 · WebSocket handler skeleton
 
 **Priority**: P1
+**Status**: ✅ Done — `app/websocket/story_ws.py` implemented with `emit()` helper, token validation (stub: any non-empty string), session lookup via `SessionStore`, and full message dispatch (`ping→pong`, `session_start→voice_session_ready`, unknown→`session_error`). Mounted in `app/main.py`. 26 WebSocket tests (339 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/websocket/story_ws.py`
 - `voice-story-agent/backend/app/main.py` (mount WS route)

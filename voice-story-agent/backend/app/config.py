@@ -22,7 +22,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -49,6 +48,9 @@ class Settings(BaseSettings):
 
     # ── Imagen ────────────────────────────────────────────────────────────
     IMAGEN_MODEL: str = "imagen-3.0-generate-001"
+
+    # ── Gemini Live (bidi-streaming voice) ────────────────────────────────
+    GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-001"
 
     # ── Cloud Text-to-Speech ──────────────────────────────────────────────
     TTS_VOICE_NAME: str = "en-US-Neural2-F"
@@ -92,15 +94,15 @@ class Settings(BaseSettings):
         """Return GCS_BUCKET_NAME or raise a developer-friendly error."""
         if not self.GCS_BUCKET_NAME:
             raise RuntimeError(
-                f"\n"
-                f"  ❌  GCS_BUCKET_NAME is required for asset storage.\n"
-                f"\n"
-                f"  Add it to backend/.env:\n"
-                f"      GCS_BUCKET_NAME={{your-project-id}}-story-assets\n"
-                f"\n"
-                f"  Create the bucket first if it doesn't exist:\n"
-                f"      gcloud storage buckets create gs://{{your-project-id}}-story-assets \\\n"
-                f"        --location=us-central1 --uniform-bucket-level-access\n"
+                "\n"
+                "  ❌  GCS_BUCKET_NAME is required for asset storage.\n"
+                "\n"
+                "  Add it to backend/.env:\n"
+                "      GCS_BUCKET_NAME={your-project-id}-story-assets\n"
+                "\n"
+                "  Create the bucket first if it doesn't exist:\n"
+                "      gcloud storage buckets create gs://{your-project-id}-story-assets \\\n"
+                "        --location=us-central1 --uniform-bucket-level-access\n"
             )
         return self.GCS_BUCKET_NAME
 
