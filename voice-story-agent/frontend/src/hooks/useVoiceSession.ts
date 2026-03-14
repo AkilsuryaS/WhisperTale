@@ -276,7 +276,7 @@ export function useVoiceSession(
     const wsOpts = {
       wsBaseUrl: WS_BASE,
       sessionId: newSessionId,
-      token: "",
+      token: newSessionId,
       reconnectBaseMs: RECONNECT_BASE_MS,
       maxRetries: MAX_RETRIES,
       onMaxRetriesExhausted: () => {
