@@ -1577,8 +1577,10 @@ Props: `isListening`, `steeringWindowOpen`, `isGenerating`, `onInterrupt`, `onFe
 ### T-038 · CaptionBar component
 
 **Priority**: P1
+**Status**: ✅ Done — `voice-story-agent/frontend/src/components/CaptionBar.tsx` implemented as a `"use client"` React component. Props: `captions: Caption[]`, `partialCaption?: PartialCaption | null`, `safetyRewrite?: SafetyRewriteEvent | null`, `safetyAccepted?: SafetyAcceptedEvent | null`, `className?`. Renders inside a fixed bottom strip with `backdrop-blur` glass effect. Each committed `Caption` is rendered as a `<Bubble>`: **user** → `ml-auto` right-aligned, `bg-story-sky` (sky-blue), `data-testid="caption-bubble-user"`; **agent** → `mr-auto` left-aligned, `bg-story-cream` (warm cream), `data-testid="caption-bubble-agent"`. `partialCaption` renders as a separate `data-testid="caption-bubble-partial"` bubble with `italic` + `opacity-70` classes as a streaming indicator; updated in-place as prop changes; disappears when set to null. **Safety rewrite**: when `safetyRewrite` is non-null and `safetyAccepted` is null → amber card (`bg-amber-50`, `border-amber-300`) with "I can make it better! ✨" + `proposed_rewrite` text, `role="alert"`. **Safety accepted**: when `safetyAccepted` is non-null → replaces amber card with green card (`bg-green-50`, `border-green-300`) showing "✓ Got it!" + `final_premise`, `role="status"`. **Auto-scroll**: `useRef` on scroll container; `useEffect` sets `scrollTop = scrollHeight` whenever `captions`, `partialCaption`, `safetyRewrite`, or `safetyAccepted` changes. 27 Jest tests in `src/components/__tests__/CaptionBar.test.tsx` covering all done-when criteria: user/agent bubbles with correct alignment classes, safety rewrite amber card present/absent/overridden by accepted, auto-scroll `scrollTop` set to `scrollHeight`, partial caption rendered/updated/promoted; plus agent bubble styling, safety accepted green card, partial-to-committed lifecycle. 131 total passing. `tsc --noEmit` exits 0.
 **Files**:
-- `voice-story-agent/frontend/src/components/CaptionBar.tsx`
+- `voice-story-agent/frontend/src/components/CaptionBar.tsx` (new)
+- `voice-story-agent/frontend/src/components/__tests__/CaptionBar.test.tsx` (new)
 
 **Description**:
 Scrolling caption strip at the bottom of the viewport:
