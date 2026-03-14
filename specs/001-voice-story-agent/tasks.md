@@ -916,8 +916,11 @@ Log the Imagen prompt text (without reference URLs) to Cloud Logging.
 ### T-024 · TTSService
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/tts_service.py` implemented with `VoiceConfig` dataclass (`voice_name: str`, `language_code: str`, `speaking_rate: float = 0.85`) and `TTSService.synthesize(script, voice_config) -> bytes`. Calls `google.cloud.texttospeech.TextToSpeechAsyncClient.synthesize_speech` with `AudioEncoding.MP3`; the client is injectable via constructor and created lazily via `_get_client()` on first use. `default_voice_config()` factory function returns a `VoiceConfig` using `settings.TTS_VOICE_NAME` / `settings.TTS_LANGUAGE_CODE` with `speaking_rate=0.85`. Retry: 1 retry with 1 s `asyncio.sleep` backoff; raises `TTSError` after both attempts fail (`.cause` holds last exception). `TTSError` added to `app/exceptions.py`. 25 mock-based tests (714 total passing, pre-existing integration tests excluded). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/tts_service.py`
+- `voice-story-agent/backend/app/exceptions.py` (add TTSError)
+- `voice-story-agent/backend/tests/test_t024_tts_service.py`
 
 **Description**:
 Implement `TTSService`:
