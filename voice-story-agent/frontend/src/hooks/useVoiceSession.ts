@@ -98,6 +98,8 @@ export interface UseVoiceSessionReturn {
   isReconnecting: boolean;
   /** Number of reconnect attempts made (0 = no reconnect attempted). */
   reconnectAttempt: number;
+  /** True once voice_session_ready has been received — mic is live and AI is listening. */
+  isReady: boolean;
   /** The active WsClient for this session (null before startSession succeeds). */
   wsClient: WsClient | null;
   /** Start the session: creates session, reserves ADK slot, connects WS, starts mic. */
@@ -159,6 +161,7 @@ export function useVoiceSession(
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const [wsClient, setWsClientState] = useState<WsClient | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   const wsClientRef = useRef<WsClient | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -247,6 +250,7 @@ export function useVoiceSession(
     setError(null);
     setIsReconnecting(false);
     setReconnectAttempt(0);
+    setIsReady(false);
 
     const activeFetch = resolveFetch();
     if (!activeFetch) {
@@ -322,8 +326,8 @@ export function useVoiceSession(
         setSessionStatus(evt.session_status);
       })
       .on("voice_session_ready", () => {
+        setIsReady(true);
         if (hasConnectedOnceRef.current && isReconnectingRef.current) {
-          // After re-connection is confirmed ready, hydrate from REST snapshot.
           void _doReconnectHydrate();
         }
       })
@@ -426,6 +430,7 @@ export function useVoiceSession(
     setError(null);
     setIsReconnecting(false);
     setReconnectAttempt(0);
+    setIsReady(false);
     setWsClientState(null);
   }, [disconnect]);
 
@@ -447,6 +452,7 @@ export function useVoiceSession(
     error,
     isReconnecting,
     reconnectAttempt,
+    isReady,
     wsClient,
     startSession,
     stopMic,

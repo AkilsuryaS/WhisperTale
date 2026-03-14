@@ -116,17 +116,20 @@ export default function StoryAppPage() {
   // ── Status message shown in the center of the screen ───────────────────
   const statusMessage = (() => {
     if (voice.error) return null;
-    if (!voice.sessionId && !voice.isListening) {
+    if (!voice.sessionId) {
       return { emoji: "🎙️", text: "Tap the microphone to begin your story", sub: "" };
     }
-    if (voice.sessionStatus === "setup" && !voice.isListening) {
+    if (!voice.isReady && !voice.isListening) {
       return { emoji: "⏳", text: "Connecting…", sub: "Setting up your story session" };
-    }
-    if (voice.isListening && story.pages.size === 0 && !isGenerating) {
-      return { emoji: "🎤", text: "Listening…", sub: "Tell me about your story! Who's the hero? Where does it happen?" };
     }
     if (voice.isReconnecting) {
       return { emoji: "🔄", text: `Reconnecting… (attempt ${voice.reconnectAttempt})`, sub: "Hang tight, getting back to your story" };
+    }
+    if (!voice.isListening && story.pages.size === 0 && !isGenerating) {
+      return { emoji: "🎙️", text: "Ready! Tap mic and tell your story", sub: "Who's the hero? Where does it happen?" };
+    }
+    if (voice.isListening && story.pages.size === 0 && !isGenerating) {
+      return { emoji: "🎤", text: "Listening…", sub: "Speak clearly — tap stop when done" };
     }
     if (isGenerating && story.pages.size === 0) {
       return { emoji: "✨", text: "Creating your story…", sub: "Generating your personalised tale" };
