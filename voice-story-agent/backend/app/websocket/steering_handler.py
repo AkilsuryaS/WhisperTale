@@ -129,7 +129,7 @@ class SteeringHandler:
         *,
         window_seconds: float = _DEFAULT_WINDOW_SECONDS,
         turn_queue: asyncio.Queue | None = None,
-    ) -> None:
+    ) -> str:
         """
         Run one complete steering window and emit all events.
 
@@ -157,6 +157,7 @@ class SteeringHandler:
         )
 
         await emit("steering_window_closed", page=page_number, reason=close_reason)
+        return close_reason
 
     # ------------------------------------------------------------------
     # Internal pipeline
@@ -303,8 +304,9 @@ class SteeringHandler:
             )
             return
 
-        # Apply steering to the arc from the next ungenerated page
-        from_page = page_number + 1
+        # Apply steering to the current page and all following pages so edits are
+        # visible immediately (same page) and remain consistent going forward.
+        from_page = page_number
         if from_page > 5 or len(current_arc) < 5:
             logger.warning(
                 "SteeringHandler: no pages left to steer (session=%s, page=%d)",
