@@ -30,6 +30,7 @@ Design
 from __future__ import annotations
 
 import asyncio
+import html
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -137,20 +138,27 @@ class TTSService:
 
         Raises any exception from the TTS client so the caller can retry.
         """
+        from google.api_core.exceptions import InvalidArgument
         from google.cloud import texttospeech  # type: ignore[import-not-found]
-        import html
 
         client = self._get_client()
 
-        # XML-escape the script to avoid breaking SSML when narration contains
-        # quotes, ampersands, angle brackets, or other special characters.
+        # Journey voices reject SSML/prosody on Cloud TTS; use plain text.
+        # For other voices we keep SSML for expressive narration.
+        use_plain_text = "journey" in voice_config.voice_name.lower()
         escaped = html.escape(script, quote=False)
         ssml_script = (
             "<speak>"
             f'<prosody rate="95%" pitch="+1st">{escaped}</prosody>'
             "</speak>"
         )
-        synthesis_input = texttospeech.SynthesisInput(ssml=ssml_script)
+
+        def _build_input(force_text: bool = False) -> Any:
+            if force_text or use_plain_text:
+                return texttospeech.SynthesisInput(text=script)
+            return texttospeech.SynthesisInput(ssml=ssml_script)
+
+        synthesis_input = _build_input()
         voice_params = texttospeech.VoiceSelectionParams(
             language_code=voice_config.language_code,
             name=voice_config.voice_name,
@@ -160,11 +168,19 @@ class TTSService:
             speaking_rate=voice_config.speaking_rate,
         )
 
-        response = await client.synthesize_speech(
-            input=synthesis_input,
-            voice=voice_params,
-            audio_config=audio_config,
-        )
+        try:
+            response = await client.synthesize_speech(
+                input=synthesis_input,
+                voice=voice_params,
+                audio_config=audio_config,
+            )
+        except InvalidArgument:
+            # Defensive fallback for any voice/config combo that rejects SSML.
+            response = await client.synthesize_speech(
+                input=_build_input(force_text=True),
+                voice=voice_params,
+                audio_config=audio_config,
+            )
         return response.audio_content
 
     # ------------------------------------------------------------------
