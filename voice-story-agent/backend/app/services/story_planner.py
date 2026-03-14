@@ -381,7 +381,9 @@ class StoryPlannerService:
             self._client = get_genai_client("StoryPlannerService")
         return self._client
 
-    async def _call_gemini(self, model: str, prompt: str) -> dict[str, Any]:
+    async def _call_gemini(
+        self, model: str, prompt: str, system_prompt: str = _SYSTEM_PROMPT
+    ) -> dict[str, Any]:
         """
         Issue one generate_content call and return the parsed JSON dict.
 
@@ -393,7 +395,7 @@ class StoryPlannerService:
             model=model,
             contents=prompt,
             config=genai_types.GenerateContentConfig(
-                system_instruction=_SYSTEM_PROMPT,
+                system_instruction=system_prompt,
                 response_mime_type="application/json",
                 temperature=0.7,
             ),
@@ -488,7 +490,10 @@ class StoryPlannerService:
         for attempt, strict in enumerate([False, True], start=1):
             try:
                 prompt = _build_expand_page_prompt(beat, page_history, bible, strict=strict)
-                data = await self._call_gemini(settings.GEMINI_FLASH_MODEL, prompt)
+                system = (
+                    _EXPAND_PAGE_STRICT_SYSTEM_PROMPT if strict else _EXPAND_PAGE_SYSTEM_PROMPT
+                )
+                data = await self._call_gemini(settings.GEMINI_FLASH_MODEL, prompt, system_prompt=system)
                 text, narration = _validate_page_response(data)
                 logger.info(
                     "StoryPlannerService: expand_page succeeded on attempt %d/2",
