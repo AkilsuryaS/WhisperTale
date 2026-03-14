@@ -343,31 +343,47 @@ export default function StoryAppPage() {
         />
       </div>
 
-      {/* ── Small floating mic FAB — reading mode (pages visible, bar collapsed) */}
+import { StoryTextInput } from "@/components/StoryTextInput";
+
+// ... [existing imports]
+
+// (Inside the component, replacing the floating mic FAB area with the new layout)
+      {/* ── Text Input & FAB Area (Bottom-Right) ── */}
       {story.pages.size > 0 && !barExpanded && (
-        <button
-          type="button"
-          aria-label={voice.isListening ? "Tap to stop" : "Tap to speak"}
-          onClick={handleFeedback}
-          className={[
-            "fixed bottom-5 right-5 z-30",
-            "flex h-14 w-14 items-center justify-center rounded-full shadow-xl",
-            voice.isListening
-              ? "bg-red-500 text-white hover:bg-red-600 active:bg-red-700 animate-pulse"
-              : "bg-purple-500 text-white hover:bg-purple-600 active:bg-purple-700",
-            "transition-colors duration-150",
-            "focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-400 focus-visible:ring-offset-2",
-          ].join(" ")}
-          data-testid="mic-fab"
-        >
-          {voice.isListening ? (
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-6 w-6">
-              <rect x="6" y="6" width="12" height="12" rx="2" />
-            </svg>
-          ) : (
-            <SmallMicIcon />
-          )}
-        </button>
+        <div className="fixed bottom-5 right-5 z-30 flex flex-col items-end gap-3">
+          {/* Optional Text Input (shown when steering window is open, or always available) */}
+          <div className="w-80 shadow-lg origin-bottom-right transition-all animate-in fade-in slide-in-from-bottom-5">
+             <StoryTextInput 
+               disabled={isGenerating || isProcessing}
+               onSend={(text) => {
+                 voice.sendTextUpdate(text);
+               }} 
+             />
+          </div>
+
+          <button
+            type="button"
+            aria-label={voice.isListening ? "Tap to stop" : "Tap to speak"}
+            onClick={handleFeedback}
+            className={[
+              "flex h-14 w-14 items-center justify-center rounded-full shadow-xl",
+              voice.isListening
+                ? "bg-red-500 text-white hover:bg-red-600 active:bg-red-700 animate-pulse"
+                : "bg-purple-500 text-white hover:bg-purple-600 active:bg-purple-700",
+              "transition-colors duration-150",
+              "focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-400 focus-visible:ring-offset-2",
+            ].join(" ")}
+            data-testid="mic-fab"
+          >
+            {voice.isListening ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-6 w-6">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            ) : (
+              <SmallMicIcon />
+            )}
+          </button>
+        </div>
       )}
 
       {/* Silent audio element — unlocks browser autoplay on first mic tap */}

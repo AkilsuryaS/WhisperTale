@@ -188,6 +188,17 @@ export class WsClient {
     }
   }
 
+  /**
+   * Send an explicit text-based story update command.
+   * Bypasses voice STT heuristics on the backend.
+   */
+  sendTextUpdate(text: string): void {
+    this.send({
+      type: "text_story_update",
+      text,
+    });
+  }
+
   /** True if the underlying WebSocket is currently open. */
   get isConnected(): boolean {
     return this._ws?.readyState === WebSocket.OPEN;

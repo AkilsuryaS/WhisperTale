@@ -66,6 +66,12 @@ class VoiceTurn:
     is_final: bool
 
 
+@dataclass
+class TextTurn(VoiceTurn):
+    """A synthetic turn created from direct text input, bypassing voice STT heuristics."""
+    pass
+
+
 def _build_client() -> genai.Client:
     """Return a Vertex AI–backed GenAI client from application settings."""
     project_id = settings.require_gcp("VoiceSessionService")
