@@ -11,6 +11,14 @@ Public interface (T-022):
         bible: CharacterBible,
     ) -> tuple[str, str]   # (display_text, narration_script)
 
+Public interface (T-029):
+    async def apply_steering(
+        arc: list[str],
+        command: VoiceCommand,
+        from_page: int,
+        content_policy: ContentPolicy | None = None,
+    ) -> list[str]
+
 Design
 ------
 - A single Gemini 2.5 Pro call with structured JSON output generates a 5-beat
@@ -45,8 +53,9 @@ from google.genai import types as genai_types
 
 from app.config import settings
 from app.exceptions import StoryPlannerError
-from app.models.character_bible import CharacterBible
+from app.models.character_bible import CharacterBible, ContentPolicy
 from app.models.session import StoryBrief
+from app.models.voice_command import VoiceCommand
 
 logger = logging.getLogger(__name__)
 
@@ -268,6 +277,83 @@ def _validate_page_response(data: dict[str, Any]) -> tuple[str, str]:
 
 
 # ---------------------------------------------------------------------------
+# apply_steering helpers (T-029)
+# ---------------------------------------------------------------------------
+
+_APPLY_STEERING_SYSTEM_PROMPT = """\
+You are an expert children's story editor. You are given a partial story arc \
+(the remaining unwritten pages) and a parent's steering instruction. Your job \
+is to revise the remaining beats so the story reflects the instruction while \
+remaining age-appropriate, warm, and consistent with the characters already \
+introduced.
+
+RULES:
+  • Return EXACTLY as many beats as you receive — one per remaining page.
+  • Each beat MUST be ≤ 40 words.
+  • Each beat must be a complete narrative summary — not a stage direction.
+  • Do NOT include any content listed in CONTENT EXCLUSIONS.
+  • Do NOT change beats that are marked as already written (none provided here).
+  • Honour the parent's STEERING INTENT faithfully.
+
+OUTPUT FORMAT — respond ONLY with a single valid JSON object, no prose, no \
+markdown, no code fences:
+{ "beats": ["<beat>", "<beat>", ...] }
+"""
+
+
+def _build_apply_steering_prompt(
+    remaining_beats: list[str],
+    from_page: int,
+    interpreted_intent: str,
+    content_policy: ContentPolicy | None,
+) -> str:
+    """Build the user-turn prompt for apply_steering."""
+    beats_block = "\n".join(
+        f"  Page {from_page + i}: {beat}"
+        for i, beat in enumerate(remaining_beats)
+    )
+    exclusions = (content_policy.exclusions if content_policy else [])
+    exclusion_block = (
+        "\n".join(f"  • {ex}" for ex in exclusions) if exclusions else "  (none)"
+    )
+    n = len(remaining_beats)
+    return (
+        f"REMAINING BEATS (pages {from_page}–{from_page + n - 1}):\n"
+        f"{beats_block}\n"
+        f"\n"
+        f"STEERING INTENT (parent's instruction):\n"
+        f"  {interpreted_intent}\n"
+        f"\n"
+        f"CONTENT EXCLUSIONS (must not appear in any beat):\n"
+        f"{exclusion_block}\n"
+        f"\n"
+        f"Revise the {n} remaining beat(s) to reflect the steering intent."
+    )
+
+
+def _validate_steering_beats(data: dict[str, Any], expected_count: int) -> list[str]:
+    """
+    Extract and validate the beats list from apply_steering Gemini response.
+
+    Raises ValueError on structural violations so the caller can retry.
+    """
+    beats = data.get("beats")
+    if not isinstance(beats, list):
+        raise ValueError(
+            f"'beats' must be a list, got {type(beats).__name__!r}"
+        )
+    if len(beats) != expected_count:
+        raise ValueError(
+            f"Expected {expected_count} beat(s), got {len(beats)}"
+        )
+    cleaned = [str(b).strip() for b in beats]
+    empties = [i for i, b in enumerate(cleaned) if not b]
+    if empties:
+        raise ValueError(f"Empty beats at indices: {empties}")
+    return cleaned
+
+
+# ---------------------------------------------------------------------------
 # Service
 # ---------------------------------------------------------------------------
 
@@ -430,3 +516,90 @@ class StoryPlannerService:
             "expand_page failed after 2 attempts",
             cause=last_exc,
         )
+
+    async def apply_steering(
+        self,
+        arc: list[str],
+        command: VoiceCommand,
+        from_page: int,
+        content_policy: ContentPolicy | None = None,
+    ) -> list[str]:
+        """
+        Revise the story arc from ``from_page`` onward to reflect a steering command.
+
+        Pages before ``from_page`` are copied unchanged. A single Gemini 2.5 Flash
+        call rewrites the remaining beats (pages ``from_page``–5) according to
+        ``command.interpreted_intent`` while honouring ``content_policy.exclusions``.
+
+        Args:
+            arc:            Current 5-beat arc (list of 5 strings).
+            command:        The accepted VoiceCommand driving the revision.
+            from_page:      1-based page number; beats at indices [from_page-1, 4]
+                            are revised; earlier beats are unchanged.
+            content_policy: Optional content policy; exclusions are injected into
+                            the Gemini prompt as hard constraints.
+
+        Returns:
+            A new list of 5 beat strings; beats 1..(from_page-1) are identical
+            to the input arc.
+
+        Raises:
+            StoryPlannerError: when the Gemini call or response validation fails.
+            ValueError:        when ``arc`` does not contain exactly 5 elements or
+                               ``from_page`` is outside 1–5.
+        """
+        if len(arc) != 5:
+            raise ValueError(f"arc must contain exactly 5 beats, got {len(arc)}")
+        if not (1 <= from_page <= 5):
+            raise ValueError(f"from_page must be 1–5, got {from_page}")
+
+        # Beats that stay unchanged (0-indexed: 0 .. from_page-2)
+        unchanged = arc[: from_page - 1]
+        remaining = arc[from_page - 1 :]  # beats to revise (1 to 5 items)
+        expected = len(remaining)
+
+        prompt = _build_apply_steering_prompt(
+            remaining_beats=remaining,
+            from_page=from_page,
+            interpreted_intent=command.interpreted_intent,
+            content_policy=content_policy,
+        )
+
+        try:
+            client = self._get_client()
+            response = await client.aio.models.generate_content(
+                model=settings.GEMINI_FLASH_MODEL,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=_APPLY_STEERING_SYSTEM_PROMPT,
+                    response_mime_type="application/json",
+                    temperature=0.7,
+                ),
+            )
+            data = json.loads(response.text)
+            revised = _validate_steering_beats(data, expected_count=expected)
+        except StoryPlannerError:
+            raise
+        except Exception as exc:
+            logger.error(
+                "StoryPlannerService: apply_steering failed "
+                "(command_id=%s, from_page=%d, error_type=%s): %s",
+                command.command_id,
+                from_page,
+                type(exc).__name__,
+                exc,
+            )
+            raise StoryPlannerError(
+                f"apply_steering failed for command {command.command_id}",
+                cause=exc,
+            ) from exc
+
+        new_arc = unchanged + revised
+        logger.info(
+            "StoryPlannerService: arc updated via steering "
+            "(command_id=%s, from_page=%d, revised_pages=%d)",
+            command.command_id,
+            from_page,
+            expected,
+        )
+        return new_arc
