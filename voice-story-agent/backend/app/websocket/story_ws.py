@@ -154,6 +154,7 @@ class _PageLoopState:
         default_factory=asyncio.Queue
     )
     in_steering_window: bool = False
+    page_loop_started: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -622,7 +623,7 @@ async def _turn_loop(
     session status = generating), spawns the page generation loop as a task.
     """
     page_loop_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
-    page_loop_started = False
+    loop_state = page_loop_state or _PageLoopState()
 
     try:
         async for turn in voice_svc.stream_turns(session_id):
@@ -680,8 +681,7 @@ async def _turn_loop(
                             store,
                         )
 
-                        # T-026: after setup completes, launch the page loop
-                        if not page_loop_started:
+                        if not loop_state.page_loop_started:
                             try:
                                 session = await store.get_session(session_id)
                                 if session.status == SessionStatus.generating:
@@ -693,7 +693,7 @@ async def _turn_loop(
                                             "status": "generating",
                                         },
                                     )
-                                    page_loop_started = True
+                                    loop_state.page_loop_started = True
                                     page_loop_task = asyncio.create_task(
                                         _page_generation_loop(
                                             ws=ws,
@@ -706,8 +706,7 @@ async def _turn_loop(
                                             media_svc=media_svc,
                                             safety_svc=safety_svc,
                                             voice_svc=voice_svc,
-                                            page_loop_state=page_loop_state,
-                                            # T-032: seed history from persisted Session
+                                            page_loop_state=loop_state,
                                             initial_page_history=list(
                                                 session.page_history
                                             ),
@@ -820,6 +819,7 @@ async def story_websocket(
 
     # ── Message dispatch loop ─────────────────────────────────────────────
     turn_loop_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
+    page_gen_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
 
     try:
         while True:
@@ -965,6 +965,49 @@ async def story_websocket(
                             store,
                         )
 
+                        # After setup completes, session status becomes
+                        # "generating".  _turn_loop only checks this when
+                        # the ADK stream yields a turn, which won't happen
+                        # while the mic is off.  Launch the page loop here.
+                        if not page_loop_state.page_loop_started:
+                            try:
+                                sess = await store.get_session(session_id)
+                                if sess.status == SessionStatus.generating:
+                                    logger.info(
+                                        "transcript_input: launching page generation loop",
+                                        extra={
+                                            "event_type": "session_status_changed",
+                                            "session_id": session_id,
+                                            "status": "generating",
+                                        },
+                                    )
+                                    page_loop_state.page_loop_started = True
+                                    page_gen_task = asyncio.create_task(
+                                        _page_generation_loop(
+                                            ws=websocket,
+                                            session_id=session_id,
+                                            store=store,
+                                            story_planner=story_planner,
+                                            character_bible_svc=character_bible_svc,
+                                            image_svc=image_svc,
+                                            tts_svc=tts_svc,
+                                            media_svc=media_svc,
+                                            safety_svc=safety_svc,
+                                            voice_svc=voice_svc,
+                                            page_loop_state=page_loop_state,
+                                            initial_page_history=list(
+                                                sess.page_history
+                                            ),
+                                        )
+                                    )
+                            except Exception as exc:
+                                logger.error(
+                                    "transcript_input: failed to launch page loop "
+                                    "(session=%s): %s",
+                                    session_id,
+                                    exc,
+                                )
+
             elif msg_type == "interrupt":
                 # T-031: client interrupts mid-narration to enter steering window
                 if not page_loop_state.in_steering_window:
@@ -1053,6 +1096,13 @@ async def story_websocket(
             turn_loop_task.cancel()
             try:
                 await turn_loop_task
+            except (asyncio.CancelledError, Exception):
+                pass
+
+        if page_gen_task is not None and not page_gen_task.done():
+            page_gen_task.cancel()
+            try:
+                await page_gen_task
             except (asyncio.CancelledError, Exception):
                 pass
 
