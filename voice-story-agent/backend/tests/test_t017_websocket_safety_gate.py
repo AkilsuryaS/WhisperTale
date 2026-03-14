@@ -52,7 +52,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.dependencies import get_safety_service, get_store, get_voice_service
+from app.dependencies import get_safety_service, get_setup_handler, get_store, get_voice_service
 from app.exceptions import SessionNotFoundError
 from app.main import app
 from app.models.safety import (
@@ -150,6 +150,31 @@ def _safe_safety_svc() -> MagicMock:
     return _make_safety_svc(safe=True)
 
 
+def _mock_setup_handler() -> MagicMock:
+    """
+    Return a SetupHandler mock that emits `turn_detected` (T-015 stub behaviour).
+
+    Lets T-017 tests check safe-turn routing without depending on the real
+    Gemini extraction call introduced in T-020.
+    """
+    handler = MagicMock()
+
+    async def _handle(ws, turn, session_id, voice_svc, setup_state, store):
+        import uuid as _uuid
+
+        await ws.send_json(
+            {
+                "type": "turn_detected",
+                "turn_id": str(_uuid.uuid4()),
+                "text": turn.transcript,
+                "phase": "setup",
+            }
+        )
+
+    handler.handle = _handle
+    return handler
+
+
 def _client(
     voice_svc: MagicMock,
     safety_svc: MagicMock,
@@ -158,6 +183,7 @@ def _client(
     app.dependency_overrides[get_store] = lambda: (store or _mock_store())
     app.dependency_overrides[get_voice_service] = lambda: voice_svc
     app.dependency_overrides[get_safety_service] = lambda: safety_svc
+    app.dependency_overrides[get_setup_handler] = lambda: _mock_setup_handler()
     return TestClient(app, raise_server_exceptions=False)
 
 
