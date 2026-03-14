@@ -169,8 +169,9 @@ export default function StoryAppPage() {
     if (!voice.sessionId) {
       voice.startSession().catch(() => { /* error shown in UI */ });
     } else if (voice.isListening) {
-      voice.stopMic();
-      setIsProcessing(true);
+      const submitted = voice.stopMic();
+      // Only show "Processing..." when we actually submitted text.
+      setIsProcessing(Boolean(submitted.trim()));
     } else {
       // If user wants to speak while pages are visible, request an interrupt so
       // backend opens/enters steering flow for applying story changes.

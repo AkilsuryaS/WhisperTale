@@ -529,8 +529,10 @@ export function useVoiceSession(
   // ---------------------------------------------------------------------------
 
   const stopMic = useCallback((): string => {
+    // Prefer final transcript chunks; fall back to the latest live transcript
+    // so we still submit what the user said when no final segment was marked.
     const transcriptText = transcriptBufferRef.current.trim();
-    const text = transcriptText;
+    const text = transcriptText || liveTranscript.trim();
     if (text && wsClientRef.current?.isConnected) {
       wsClientRef.current.send({
         type: "transcript_input",
@@ -541,7 +543,7 @@ export function useVoiceSession(
     setLiveTranscript("");
     stopStreaming();
     return text;
-  }, [stopStreaming]);
+  }, [stopStreaming, liveTranscript]);
 
   // ---------------------------------------------------------------------------
   // stopSession
