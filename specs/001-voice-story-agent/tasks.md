@@ -498,6 +498,7 @@ raise `VoiceSessionError` if the response does not complete within the timeout.
 ### T-015 · WebSocket handler — audio streaming + turn routing
 
 **Priority**: P1
+**Status**: ✅ Done — `story_ws.py` extended: binary frames forwarded to `VoiceSessionService.send_audio` (VoiceSessionNotFoundError silently swallowed before session_start); `session_start` now calls `voice_svc.start` with `_SETUP_SYSTEM_PROMPT` and spawns `_turn_loop` background task; `_turn_loop` iterates `stream_turns`, emits `transcript` JSON events + binary audio frames for agent turns, routes final user turns via `_route_user_turn` → `turn_detected` events; `transcript_input` message creates synthetic `VoiceTurn` and routes directly to `turn_detected`; `voice_svc.end` called in `finally` block. `get_voice_service` singleton dependency added to `app/dependencies.py`. 33 new mock-based tests (424 total passing). Existing T-012 tests updated to override `get_voice_service`. Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/websocket/story_ws.py` (extend)
 

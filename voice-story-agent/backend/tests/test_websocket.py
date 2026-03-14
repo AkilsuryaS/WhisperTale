@@ -2,8 +2,8 @@
 Tests for T-012: WebSocket handler skeleton.
 
 Uses FastAPI's synchronous TestClient WebSocket support (Starlette under the
-hood).  SessionStore is injected via app.dependency_overrides so no real
-Firestore calls are made.
+hood).  SessionStore and VoiceSessionService are injected via
+app.dependency_overrides so no real Firestore / Gemini Live calls are made.
 
 Covers:
   - connect with valid token → receives `connected` event with session_status
@@ -26,7 +26,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from app.dependencies import get_store
+from app.dependencies import get_store, get_voice_service
 from app.exceptions import SessionNotFoundError
 from app.main import app
 from app.models.session import Session, SessionStatus
@@ -63,8 +63,27 @@ def _mock_store(
     return store
 
 
-def _client(store: MagicMock) -> TestClient:
+def _mock_voice_svc() -> MagicMock:
+    """Return a VoiceSessionService mock that no-ops on all calls."""
+    svc = MagicMock()
+    svc.start = AsyncMock()
+    svc.send_audio = AsyncMock()
+    svc.end = AsyncMock()
+
+    # stream_turns returns an empty async generator so _turn_loop exits immediately.
+    async def _empty_stream(_session_id):
+        return
+        yield  # makes this an async generator (unreachable but required)
+
+    svc.stream_turns = _empty_stream
+    return svc
+
+
+def _client(store: MagicMock, voice_svc: MagicMock | None = None) -> TestClient:
     app.dependency_overrides[get_store] = lambda: store
+    app.dependency_overrides[get_voice_service] = lambda: (
+        voice_svc if voice_svc is not None else _mock_voice_svc()
+    )
     return TestClient(app, raise_server_exceptions=False)
 
 
