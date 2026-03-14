@@ -668,8 +668,12 @@ mutates the ContentPolicy:
 ### T-017 · WebSocket safety gate integration
 
 **Priority**: P1
+**Status**: ✅ Done — Safety gate wired into every `is_final=True` user turn in both `_turn_loop` (ADK stream) and the `transcript_input` handler. `_SafetyGate` dataclass holds per-session mutable state (awaiting_ack, decision_id, proposed_rewrite, category, etc.). `_begin_safety_rewrite` arms gate, emits `safety_rewrite`, calls `VoiceSessionService.speak`. `_complete_safety_ack` saves `SafetyDecision(user_accepted=True)`, appends exclusion to `ContentPolicy` (when CharacterBible exists), emits `safety_accepted`. `_persist_abandoned_safety_decision` fires in `finally` on disconnect, saves `SafetyDecision(user_accepted=False)` and sets session status to `error`. `SafetyDecision.detected_category` made Optional to handle fail-safe path. `get_safety_service()` singleton added to `app/dependencies.py`. Existing WebSocket test files (test_websocket.py, test_t015_websocket_audio.py) updated to override `get_safety_service`. 33 new mock-based tests (487 total passing, 30 integration tests deselected). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/websocket/story_ws.py` (extend)
+- `voice-story-agent/backend/app/dependencies.py` (add get_safety_service)
+- `voice-story-agent/backend/app/models/safety.py` (detected_category Optional)
+- `voice-story-agent/backend/tests/test_t017_websocket_safety_gate.py`
 
 **Description**:
 In the `_turn_loop`, for every `is_final=True` user turn:
