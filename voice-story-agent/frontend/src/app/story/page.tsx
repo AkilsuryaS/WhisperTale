@@ -102,11 +102,8 @@ export default function StoryAppPage() {
       // Keep the WebSocket open so story events can stream back
       voice.stopMic();
     } else {
-      // Session exists but mic is off — full reset then restart
-      voice.stopSession();
-      setTimeout(() => {
-        voice.startSession().catch(() => { /* error shown in UI */ });
-      }, 200);
+      // Session exists and mic is off — resume mic on the same session.
+      voice.startMic().catch(() => { /* error shown in UI */ });
     }
   }, [voice]);
 

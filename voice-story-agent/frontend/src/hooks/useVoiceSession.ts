@@ -104,6 +104,8 @@ export interface UseVoiceSessionReturn {
   wsClient: WsClient | null;
   /** Start the session: creates session, reserves ADK slot, connects WS, starts mic. */
   startSession: () => Promise<void>;
+  /** Start microphone capture for an existing session (without creating a new session). */
+  startMic: () => Promise<void>;
   /** Stop only the microphone — keeps WebSocket open so story events can still arrive. */
   stopMic: () => void;
   /** Stop streaming and disconnect cleanly (full teardown). */
@@ -127,6 +129,31 @@ const WS_BASE =
 /** T-045: 1 s base → 1 s, 2 s, 4 s, 8 s, 16 s (5 attempts). */
 const RECONNECT_BASE_MS = 1000;
 const MAX_RETRIES = 5;
+
+interface SpeechRecognitionResultLike {
+  readonly isFinal: boolean;
+  readonly 0: { readonly transcript: string };
+}
+
+interface SpeechRecognitionEventLike {
+  readonly resultIndex: number;
+  readonly results: {
+    readonly length: number;
+    item(index: number): SpeechRecognitionResultLike;
+    [index: number]: SpeechRecognitionResultLike;
+  };
+}
+
+interface SpeechRecognitionLike {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: ((event: unknown) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
 
 // ---------------------------------------------------------------------------
 // Hook
@@ -166,6 +193,8 @@ export function useVoiceSession(
   const wsClientRef = useRef<WsClient | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const transcriptBufferRef = useRef("");
   const stoppedRef = useRef(false);
 
   // Track whether the first `connected` event has fired so subsequent ones
@@ -200,6 +229,10 @@ export function useVoiceSession(
       try { s._audioContext?.close(); } catch { /* ignore */ }
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+    }
+    if (speechRecognitionRef.current) {
+      try { speechRecognitionRef.current.stop(); } catch { /* ignore */ }
+      speechRecognitionRef.current = null;
     }
     setIsListening(false);
   }, []);
@@ -239,6 +272,108 @@ export function useVoiceSession(
     isReconnectingRef.current = false;
     setReconnectAttempt(0);
   }, [resolveFetch]);
+
+  const startMic = useCallback(async () => {
+    if (!wsClientRef.current) {
+      setError({ code: "no_ws_session", message: "WebSocket session not ready yet" });
+      return;
+    }
+
+    const mediaDevices =
+      _mediaDevices ??
+      (typeof navigator !== "undefined"
+        ? navigator.mediaDevices
+        : undefined);
+
+    if (!mediaDevices) {
+      setError({ code: "no_media_devices", message: "MediaDevices not available" });
+      return;
+    }
+
+    let stream: MediaStream;
+    try {
+      stream = await mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (e) {
+      setError({ code: "mic_permission_denied", message: String(e) });
+      return;
+    }
+
+    if (stoppedRef.current) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    streamRef.current = stream;
+
+    // Use Web Audio API to capture raw PCM (16-bit, 16 kHz, mono).
+    const audioContext = new AudioContext({ sampleRate: 16000 });
+    const source = audioContext.createMediaStreamSource(stream);
+    const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+    processor.onaudioprocess = (evt) => {
+      if (stoppedRef.current || !wsClientRef.current?.isConnected) return;
+      const float32 = evt.inputBuffer.getChannelData(0);
+      const int16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      wsClientRef.current.sendAudio(int16.buffer);
+    };
+
+    source.connect(processor);
+    processor.connect(audioContext.destination);
+
+    (streamRef as React.MutableRefObject<
+      (MediaStream & {
+        _audioContext?: AudioContext;
+        _processor?: ScriptProcessorNode;
+        _source?: MediaStreamAudioSourceNode;
+      }) | null
+    >).current = Object.assign(stream, {
+      _audioContext: audioContext,
+      _processor: processor,
+      _source: source,
+    });
+
+    // Browser STT fallback: ensures stopMic always yields a turn via transcript_input.
+    if (typeof window !== "undefined") {
+      const w = window as Window & {
+        SpeechRecognition?: new () => SpeechRecognitionLike;
+        webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+      };
+      const RecognitionCtor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+      if (RecognitionCtor) {
+        const recognition = new RecognitionCtor();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = "en-US";
+        recognition.onresult = (evt) => {
+          let finalText = "";
+          for (let i = evt.resultIndex; i < evt.results.length; i++) {
+            const result = evt.results[i] ?? evt.results.item(i);
+            const transcript = result?.[0]?.transcript?.trim() ?? "";
+            if (result?.isFinal && transcript) {
+              finalText += `${transcript} `;
+            }
+          }
+          if (finalText.trim()) {
+            transcriptBufferRef.current = `${transcriptBufferRef.current} ${finalText}`.trim();
+          }
+        };
+        recognition.onerror = () => { /* ignore; PCM stream still active */ };
+        recognition.onend = () => { /* no-op */ };
+        try {
+          recognition.start();
+          speechRecognitionRef.current = recognition;
+        } catch {
+          // Ignore STT fallback start failures; audio streaming still works.
+        }
+      }
+    }
+
+    setIsListening(true);
+  }, [_mediaDevices]);
 
   // ---------------------------------------------------------------------------
   // startSession
@@ -349,69 +484,24 @@ export function useVoiceSession(
       return;
     }
 
-    // ── Step 4: Request microphone & start streaming ─────────────────────────
-    const mediaDevices =
-      _mediaDevices ??
-      (typeof navigator !== "undefined"
-        ? navigator.mediaDevices
-        : undefined);
-
-    if (!mediaDevices) {
-      setError({ code: "no_media_devices", message: "MediaDevices not available" });
-      return;
-    }
-
-    let stream: MediaStream;
-    try {
-      stream = await mediaDevices.getUserMedia({ audio: true, video: false });
-    } catch (e) {
-      setError({ code: "mic_permission_denied", message: String(e) });
-      return;
-    }
-
-    if (stoppedRef.current) {
-      stream.getTracks().forEach((t) => t.stop());
-      return;
-    }
-
-    streamRef.current = stream;
-
-    // Use Web Audio API to capture raw PCM (16-bit, 16 kHz, mono)
-    // MediaRecorder with audio/webm produces compressed Opus which Gemini Live cannot use.
-    const audioContext = new AudioContext({ sampleRate: 16000 });
-    const source = audioContext.createMediaStreamSource(stream);
-    const processor = audioContext.createScriptProcessor(4096, 1, 1);
-
-    processor.onaudioprocess = (evt) => {
-      if (stoppedRef.current || !wsClientRef.current?.isConnected) return;
-      const float32 = evt.inputBuffer.getChannelData(0);
-      // Convert float32 [-1,1] to int16
-      const int16 = new Int16Array(float32.length);
-      for (let i = 0; i < float32.length; i++) {
-        const s = Math.max(-1, Math.min(1, float32[i]));
-        int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-      }
-      wsClientRef.current.sendAudio(int16.buffer);
-    };
-
-    source.connect(processor);
-    processor.connect(audioContext.destination);
-
-    // Store cleanup refs
-    (streamRef as React.MutableRefObject<MediaStream & { _audioContext?: AudioContext; _processor?: ScriptProcessorNode; _source?: MediaStreamAudioSourceNode } | null>).current = Object.assign(stream, {
-      _audioContext: audioContext,
-      _processor: processor,
-      _source: source,
-    });
-
-    setIsListening(true);
-  }, [resolveFetch, _mediaDevices, _wsClientFactory, _MediaRecorder, stopStreaming, _doReconnectHydrate]);
+    // ── Step 4: Start microphone capture for this active session ─────────────
+    await startMic();
+  }, [resolveFetch, _wsClientFactory, stopStreaming, _doReconnectHydrate, startMic]);
 
   // ---------------------------------------------------------------------------
   // stopMic — stop only the microphone, keep WebSocket open
   // ---------------------------------------------------------------------------
 
   const stopMic = useCallback(() => {
+    const transcriptText = transcriptBufferRef.current.trim();
+    if (transcriptText && wsClientRef.current?.isConnected) {
+      wsClientRef.current.send({
+        type: "transcript_input",
+        text: transcriptText,
+        phase: "setup",
+      });
+    }
+    transcriptBufferRef.current = "";
     stopStreaming();
   }, [stopStreaming]);
 
@@ -455,6 +545,7 @@ export function useVoiceSession(
     isReady,
     wsClient,
     startSession,
+    startMic,
     stopMic,
     stopSession,
   };
