@@ -136,40 +136,64 @@ export function VoiceButton({
 
   return (
     <div
-      className={`relative inline-flex items-center justify-center ${className}`}
+      className={`relative inline-flex flex-col items-center gap-3 ${className}`}
       data-testid="voice-button-wrapper"
     >
-      {/* Pulsing ring — rendered behind the button */}
-      {showRing && (
-        <span
-          data-testid="voice-button-ring"
-          aria-hidden="true"
-          className={[
-            "absolute inset-0 rounded-full border-4",
-            ringColour,
-            "animate-gentle-pulse",
-          ].join(" ")}
-        />
-      )}
+      {/* Instruction label above the button */}
+      <span className="text-sm font-medium tracking-wide text-center pointer-events-none select-none"
+        style={{ minHeight: "1.25rem" }}>
+        {steeringWindowOpen ? (
+          <span className="text-amber-600 animate-pulse">🎤 Speak to change the story…</span>
+        ) : isListening ? (
+          <span className="text-purple-700 font-semibold animate-pulse">⏹ Tap to stop &amp; create story</span>
+        ) : isDisabled ? (
+          <span className="text-gray-400">✨ Creating your story…</span>
+        ) : (
+          <span className="text-purple-500">👇 Tap to start</span>
+        )}
+      </span>
 
-      <button
-        type="button"
-        role="button"
-        aria-label={ariaLabel}
-        aria-pressed={isListening || steeringWindowOpen}
-        aria-disabled={isDisabled}
-        disabled={isDisabled}
-        onClick={handleClick}
-        data-testid="voice-button"
-        className={[
-          "relative z-10 flex h-20 w-20 items-center justify-center",
-          "rounded-full shadow-lg transition-colors duration-150 focus:outline-none",
-          "focus-visible:ring-4 focus-visible:ring-offset-2 focus-visible:ring-purple-400",
-          buttonColour,
-        ].join(" ")}
-      >
-        <MicIcon className="h-9 w-9" />
-      </button>
+      <div className="relative inline-flex items-center justify-center">
+        {/* Pulsing ring — rendered behind the button */}
+        {showRing && (
+          <span
+            data-testid="voice-button-ring"
+            aria-hidden="true"
+            className={[
+              "absolute inset-0 rounded-full border-4",
+              ringColour,
+              "animate-gentle-pulse",
+            ].join(" ")}
+          />
+        )}
+
+        <button
+          type="button"
+          role="button"
+          aria-label={ariaLabel}
+          aria-pressed={isListening || steeringWindowOpen}
+          aria-disabled={isDisabled}
+          disabled={isDisabled}
+          onClick={handleClick}
+          data-testid="voice-button"
+          className={[
+            "relative z-10 flex h-20 w-20 items-center justify-center",
+            "rounded-full shadow-lg transition-colors duration-150 focus:outline-none",
+            "focus-visible:ring-4 focus-visible:ring-offset-2 focus-visible:ring-purple-400",
+            buttonColour,
+          ].join(" ")}
+        >
+          {isListening && !steeringWindowOpen ? (
+            /* Stop square icon while listening */
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+              aria-hidden="true" className="h-9 w-9">
+              <rect x="5" y="5" width="14" height="14" rx="2" />
+            </svg>
+          ) : (
+            <MicIcon className="h-9 w-9" />
+          )}
+        </button>
+      </div>
     </div>
   );
 }
