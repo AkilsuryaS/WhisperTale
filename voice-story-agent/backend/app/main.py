@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.logging_config import configure_logging
 from app.routers import pages, sessions
 from app.websocket import story_ws
 
@@ -74,15 +75,17 @@ app.include_router(story_ws.router)
 
 @app.on_event("startup")
 async def _startup() -> None:
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(levelname)s  %(name)s  %(message)s",
-    )
+    configure_logging()
     for warning in settings.startup_warnings():
-        logger.warning("⚠️  %s", warning)
+        logger.warning(
+            "startup warning: %s",
+            warning,
+            extra={"event_type": "startup_warning"},
+        )
     logger.info(
         "Voice Story Agent started. "
-        "Docs: http://localhost:8000/docs  |  Health: http://localhost:8000/health"
+        "Docs: http://localhost:8000/docs  |  Health: http://localhost:8000/health",
+        extra={"event_type": "startup"},
     )
 
 

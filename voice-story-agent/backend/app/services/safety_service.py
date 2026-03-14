@@ -163,10 +163,12 @@ class SafetyService:
             data = await self._call_gemini(utterance)
         except Exception as exc:
             logger.error(
-                "SafetyService: classifier error "
-                "(session=%s, error_type=%s) — returning fail-safe result",
-                session_id,
-                type(exc).__name__,
+                "SafetyService: classifier error — returning fail-safe result",
+                extra={
+                    "event_type": "safety_classifier_error",
+                    "session_id": session_id,
+                    "error_type": type(exc).__name__,
+                },
             )
             return SafetyResult(
                 safe=False, category=None, rewrite=SAFE_FALLBACK_REWRITE
@@ -179,6 +181,14 @@ class SafetyService:
             rewrite: str | None = data.get("rewrite")
 
             if safe:
+                logger.info(
+                    "SafetyService: content classified safe",
+                    extra={
+                        "event_type": "safety_decision",
+                        "session_id": session_id,
+                        "safe": True,
+                    },
+                )
                 return SafetyResult(safe=True, category=None, rewrite=None)
 
             # Map category string to enum; fall back gracefully on unknown values.
@@ -188,11 +198,25 @@ class SafetyService:
                     category = SafetyCategory(category_str)
                 except ValueError:
                     logger.warning(
-                        "SafetyService: unknown category %r (session=%s)",
+                        "SafetyService: unknown safety category %r",
                         category_str,
-                        session_id,
+                        extra={
+                            "event_type": "safety_unknown_category",
+                            "session_id": session_id,
+                            "category": category_str,
+                        },
                     )
 
+            # Log the triggered category — NOT the raw utterance (Child Safety First)
+            logger.warning(
+                "SafetyService: unsafe content detected — rewriting",
+                extra={
+                    "event_type": "safety_decision",
+                    "session_id": session_id,
+                    "safe": False,
+                    "category": category.value if category else None,
+                },
+            )
             return SafetyResult(
                 safe=False,
                 category=category,
@@ -201,10 +225,12 @@ class SafetyService:
 
         except Exception as exc:
             logger.error(
-                "SafetyService: response parsing error "
-                "(session=%s, error_type=%s) — returning fail-safe result",
-                session_id,
-                type(exc).__name__,
+                "SafetyService: response parsing error — returning fail-safe result",
+                extra={
+                    "event_type": "safety_parse_error",
+                    "session_id": session_id,
+                    "error_type": type(exc).__name__,
+                },
             )
             return SafetyResult(
                 safe=False, category=None, rewrite=SAFE_FALLBACK_REWRITE

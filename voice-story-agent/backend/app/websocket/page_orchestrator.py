@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Callable
 
@@ -87,6 +88,15 @@ async def _generate_image_asset(
             signed_url=signed_url,
             gcs_uri=gcs_uri,
         )
+        logger.info(
+            "page illustration generated",
+            extra={
+                "event_type": "page_asset_ready",
+                "session_id": session_id,
+                "page_number": page_number,
+                "asset_type": "illustration",
+            },
+        )
         return True, gcs_uri
     except Exception as exc:
         logger.warning(
@@ -101,6 +111,16 @@ async def _generate_image_asset(
             page=page_number,
             asset_type="illustration",
             error=str(exc),
+        )
+        logger.warning(
+            "page illustration asset failed",
+            extra={
+                "event_type": "page_asset_failed",
+                "session_id": session_id,
+                "page_number": page_number,
+                "asset_type": "illustration",
+                "error_type": type(exc).__name__,
+            },
         )
         return False, None
 
@@ -131,6 +151,15 @@ async def _generate_audio_asset(
             signed_url=signed_url,
             gcs_uri=gcs_uri,
         )
+        logger.info(
+            "page narration generated",
+            extra={
+                "event_type": "page_asset_ready",
+                "session_id": session_id,
+                "page_number": page_number,
+                "asset_type": "narration",
+            },
+        )
         return True
     except Exception as exc:
         logger.warning(
@@ -145,6 +174,16 @@ async def _generate_audio_asset(
             page=page_number,
             asset_type="narration",
             error=str(exc),
+        )
+        logger.warning(
+            "page narration asset failed",
+            extra={
+                "event_type": "page_asset_failed",
+                "session_id": session_id,
+                "page_number": page_number,
+                "asset_type": "narration",
+                "error_type": type(exc).__name__,
+            },
         )
         return False
 
@@ -195,12 +234,33 @@ async def run_page(
     page = Page(page_number=page_number, beat=beat, status=PageStatus.pending)
     await emit("page_generating", page=page_number, beat=beat)
     await session_store.save_page(session_id, page)
+    logger.info(
+        "page generation started",
+        extra={
+            "event_type": "page_generation_started",
+            "session_id": session_id,
+            "page_number": page_number,
+        },
+    )
+    _page_start_time = time.perf_counter()
 
     # ------------------------------------------------------------------
     # Step 2 — expand beat into text + narration_script
     # ------------------------------------------------------------------
     bible = await session_store.get_character_bible(session_id)
+    _gemini_start = time.perf_counter()
     text, narration_script = await story_planner.expand_page(beat, page_history, bible)
+    _gemini_elapsed_ms = round((time.perf_counter() - _gemini_start) * 1000)
+    logger.info(
+        "Gemini expand_page completed",
+        extra={
+            "event_type": "gemini_call_latency",
+            "session_id": session_id,
+            "page_number": page_number,
+            "operation": "expand_page",
+            "duration_ms": _gemini_elapsed_ms,
+        },
+    )
 
     page.text = text
     page.narration_script = narration_script
@@ -305,4 +365,16 @@ async def run_page(
         page=page_number,
         illustration_failed=illustration_failed,
         audio_failed=audio_failed,
+    )
+    _page_elapsed_ms = round((time.perf_counter() - _page_start_time) * 1000)
+    logger.info(
+        "page generation complete",
+        extra={
+            "event_type": "page_generation_complete",
+            "session_id": session_id,
+            "page_number": page_number,
+            "illustration_failed": illustration_failed,
+            "audio_failed": audio_failed,
+            "duration_ms": _page_elapsed_ms,
+        },
     )
