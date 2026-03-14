@@ -105,19 +105,13 @@ export default function StoryAppPage() {
     if (!voice.sessionId) {
       voice.startSession().catch(() => { /* error shown in UI */ });
     } else if (voice.isListening) {
-      const text = voice.stopMic();
-      story.addCaption({
-        role: "user",
-        text,
-        turnId: `local-${Date.now()}`,
-        isFinal: true,
-      });
+      voice.stopMic();
       setIsProcessing(true);
     } else {
       setIsProcessing(false);
       voice.startMic().catch(() => { /* error shown in UI */ });
     }
-  }, [voice, story]);
+  }, [voice]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const totalPages = 5;

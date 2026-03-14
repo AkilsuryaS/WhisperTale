@@ -91,8 +91,8 @@ export class WsClient {
   private readonly _factory: (url: string) => WebSocket;
   private readonly _onMaxRetriesExhausted: (() => void) | undefined;
 
-  /** Registered event-type → handler map.  Keyed by type string. */
-  private readonly _handlers: Map<string, EventHandler<WsServerEvent["type"]>>;
+  /** Registered event-type → handler list.  Keyed by type string. */
+  private readonly _handlers: Map<string, EventHandler<WsServerEvent["type"]>[]>;
 
   private _ws: WebSocket | null = null;
   /** True after `disconnect()` is called — prevents auto-reconnect. */
@@ -117,7 +117,8 @@ export class WsClient {
   /**
    * Register a handler for a specific server event type.
    *
-   * Only one handler per type is supported (last registration wins).
+   * Multiple handlers per type are supported; all are called in
+   * registration order when the event arrives.
    *
    * @example
    * client.on("transcript", (evt) => console.log(evt.text));
@@ -126,13 +127,11 @@ export class WsClient {
     type: T,
     handler: EventHandler<T>
   ): this {
-    // The internal map stores handlers as the widest handler type.
-    // The double-cast through `unknown` is safe: when we retrieve by the same
-    // `type` key, the dispatched payload is always `WsServerEventByType<T>`.
-    this._handlers.set(
-      type,
+    const existing = this._handlers.get(type) ?? [];
+    existing.push(
       handler as unknown as EventHandler<WsServerEvent["type"]>
     );
+    this._handlers.set(type, existing);
     return this;
   }
 
@@ -245,9 +244,11 @@ export class WsClient {
       return;
     }
 
-    const handler = this._handlers.get(parsed.type);
-    if (handler) {
-      handler(parsed);
+    const handlers = this._handlers.get(parsed.type);
+    if (handlers) {
+      for (const handler of handlers) {
+        handler(parsed);
+      }
     }
   };
 
