@@ -48,6 +48,16 @@ T-020  Setup parameter extraction wired into _route_user_turn:
               e. Emits `character_bible_ready`.
               f. Updates Session.status → generating.
 
+T-026  Page generation loop wired after character_bible_ready:
+         After setup completes (character_bible_ready emitted), a background
+         task runs the 5-page loop:
+           for page_number in 1..5:
+               await run_page(...)                   # generates text, image, TTS
+               emit page_complete                     # fired by run_page
+               open steering window (10 s timer)      # await asyncio.sleep(10)
+           emit story_complete
+           update Session.status = complete
+
 Token validation (stub):
     Any non-empty, non-whitespace token string is accepted.
     Real JWT verification is wired in a later task.
@@ -69,9 +79,14 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 
 from app.dependencies import (
+    get_character_bible_svc,
+    get_image_svc,
+    get_media_svc,
     get_safety_service,
     get_setup_handler,
     get_store,
+    get_story_planner,
+    get_tts_svc,
     get_voice_service,
 )
 from app.websocket.setup_handler import SetupHandler, SetupState
@@ -88,8 +103,13 @@ from app.models.safety import (
 )
 from app.models.session import SessionStatus
 from app.services.adk_voice_service import VoiceTurn, VoiceSessionService
+from app.services.character_bible_service import CharacterBibleService
+from app.services.image_generation import ImageGenerationService
+from app.services.media_persistence import MediaPersistenceService
 from app.services.safety_service import SafetyService
 from app.services.session_store import SessionStore
+from app.services.story_planner import StoryPlannerService
+from app.services.tts_service import TTSService
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +122,9 @@ _SETUP_SYSTEM_PROMPT = (
     "personalised bedtime story. Ask gentle, open-ended questions one at a time. "
     "Keep each response short (≤ 2 sentences) and encouraging."
 )
+
+# Duration (seconds) for the steering window between pages.
+_STEERING_WINDOW_SECONDS = 10
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +345,125 @@ async def _route_user_turn(
 
 
 # ---------------------------------------------------------------------------
+# Page generation loop (T-026)
+# ---------------------------------------------------------------------------
+
+
+async def _page_generation_loop(
+    ws: WebSocket,
+    session_id: str,
+    store: SessionStore,
+    story_planner: StoryPlannerService,
+    character_bible_svc: CharacterBibleService,
+    image_svc: ImageGenerationService,
+    tts_svc: TTSService,
+    media_svc: MediaPersistenceService,
+    steering_window_seconds: float = _STEERING_WINDOW_SECONDS,
+) -> None:
+    """
+    Run the full 5-page story generation loop after setup is complete.
+
+    Sequence for each page:
+      1. Fetch the current session to get the story arc and page history.
+      2. Call run_page (emits page events via the WebSocket).
+      3. Open a steering window (sleep for steering_window_seconds) to allow
+         voice commands before the next page begins.
+    After all 5 pages: emit story_complete, update session status to complete.
+    """
+    from app.websocket.page_orchestrator import run_page
+
+    async def ws_emit(event_type: str, **fields: object) -> None:
+        try:
+            await emit(ws, event_type, **fields)
+        except Exception:
+            pass  # WebSocket may have closed during generation
+
+    try:
+        for page_number in range(1, 6):
+            # Re-fetch session to get latest story_arc and current_page
+            try:
+                session = await store.get_session(session_id)
+            except Exception as exc:
+                logger.error(
+                    "_page_generation_loop: get_session failed (session=%s, page=%d): %s",
+                    session_id,
+                    page_number,
+                    exc,
+                )
+                break
+
+            if not session.story_arc or len(session.story_arc) < page_number:
+                logger.error(
+                    "_page_generation_loop: story arc too short "
+                    "(session=%s, page=%d, arc_len=%d)",
+                    session_id,
+                    page_number,
+                    len(session.story_arc),
+                )
+                break
+
+            beat = session.story_arc[page_number - 1]
+
+            # Build page_history from text of prior completed pages
+            page_history: list[str] = []
+            for pn in range(1, page_number):
+                pg = await store.get_page(session_id, pn)
+                if pg is not None and pg.text:
+                    sentences = pg.text.split(".")
+                    summary = sentences[0].strip() + "." if sentences else pg.text
+                    page_history.append(summary)
+
+            await run_page(
+                session_id=session_id,
+                page_number=page_number,
+                beat=beat,
+                page_history=page_history,
+                emit=ws_emit,
+                story_planner=story_planner,
+                character_bible_svc=character_bible_svc,
+                image_svc=image_svc,
+                tts_svc=tts_svc,
+                media_svc=media_svc,
+                session_store=store,
+            )
+
+            # Steering window: allow voice commands before next page
+            if page_number < 5:
+                await ws_emit(
+                    "steering_window_open",
+                    page=page_number,
+                    duration_seconds=steering_window_seconds,
+                )
+                await asyncio.sleep(steering_window_seconds)
+                await ws_emit("steering_window_closed", page=page_number)
+
+        # All 5 pages done — emit story_complete and update status
+        await ws_emit("story_complete", session_id=session_id)
+        try:
+            await store.update_session_status(session_id, SessionStatus.complete)
+        except Exception as exc:
+            logger.error(
+                "_page_generation_loop: update_session_status failed (session=%s): %s",
+                session_id,
+                exc,
+            )
+
+    except asyncio.CancelledError:
+        logger.debug("_page_generation_loop cancelled (session=%s)", session_id)
+        raise
+    except Exception as exc:
+        logger.error(
+            "_page_generation_loop: unexpected error (session=%s): %s",
+            session_id,
+            exc,
+        )
+        try:
+            await ws_emit("session_error", code="page_generation_error")
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
 # Turn streaming background task
 # ---------------------------------------------------------------------------
 
@@ -335,6 +477,11 @@ async def _turn_loop(
     safety_gate: _SafetyGate,
     setup_handler: SetupHandler,
     setup_state: SetupState,
+    story_planner: StoryPlannerService,
+    character_bible_svc: CharacterBibleService,
+    image_svc: ImageGenerationService,
+    tts_svc: TTSService,
+    media_svc: MediaPersistenceService,
 ) -> None:
     """
     Background task: relay VoiceTurn events from the ADK stream to the client.
@@ -346,7 +493,14 @@ async def _turn_loop(
           * If the safety gate is awaiting ack → complete the ack.
           * Otherwise: evaluate with SafetyService; if unsafe, begin a safety
             rewrite; if safe, route to SetupHandler via _route_user_turn.
+
+    T-026: Monitors for `character_bible_ready` completion. When SetupHandler
+    emits `character_bible_ready` (signalled via setup_state.all_confirmed and
+    session status = generating), spawns the page generation loop as a task.
     """
+    page_loop_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
+    page_loop_started = False
+
     try:
         async for turn in voice_svc.stream_turns(session_id):
             turn_id = str(uuid.uuid4())
@@ -394,8 +548,40 @@ async def _turn_loop(
                             store,
                         )
 
+                        # T-026: after setup completes, launch the page loop
+                        if not page_loop_started:
+                            try:
+                                session = await store.get_session(session_id)
+                                if session.status == SessionStatus.generating:
+                                    page_loop_started = True
+                                    page_loop_task = asyncio.create_task(
+                                        _page_generation_loop(
+                                            ws=ws,
+                                            session_id=session_id,
+                                            store=store,
+                                            story_planner=story_planner,
+                                            character_bible_svc=character_bible_svc,
+                                            image_svc=image_svc,
+                                            tts_svc=tts_svc,
+                                            media_svc=media_svc,
+                                        )
+                                    )
+                            except Exception as exc:
+                                logger.error(
+                                    "_turn_loop: failed to check session for page loop "
+                                    "(session=%s): %s",
+                                    session_id,
+                                    exc,
+                                )
+
     except asyncio.CancelledError:
         logger.debug("_turn_loop cancelled (session=%s)", session_id)
+        if page_loop_task is not None and not page_loop_task.done():
+            page_loop_task.cancel()
+            try:
+                await page_loop_task
+            except (asyncio.CancelledError, Exception):
+                pass
         raise
     except VoiceSessionNotFoundError:
         logger.warning(
@@ -423,6 +609,11 @@ async def story_websocket(
     voice_svc: VoiceSessionService = Depends(get_voice_service),
     safety_svc: SafetyService = Depends(get_safety_service),
     setup_handler: SetupHandler = Depends(get_setup_handler),
+    story_planner: StoryPlannerService = Depends(get_story_planner),
+    character_bible_svc: CharacterBibleService = Depends(get_character_bible_svc),
+    image_svc: ImageGenerationService = Depends(get_image_svc),
+    tts_svc: TTSService = Depends(get_tts_svc),
+    media_svc: MediaPersistenceService = Depends(get_media_svc),
 ) -> None:
     """
     Bidi-streaming WebSocket for a single story session.
@@ -533,6 +724,11 @@ async def story_websocket(
                                 safety_gate,
                                 setup_handler,
                                 setup_state,
+                                story_planner,
+                                character_bible_svc,
+                                image_svc,
+                                tts_svc,
+                                media_svc,
                             )
                         )
                     await emit(websocket, "voice_session_ready")
