@@ -114,9 +114,9 @@ class ImageGenerationService:
             config=genai_types.GenerateImagesConfig(
                 number_of_images=1,
                 aspect_ratio="1:1",
-                person_generation="ALLOW_ALL",
-                safety_filter_level="BLOCK_MEDIUM_AND_ABOVE",
                 output_mime_type="image/png",
+                # person_generation and safety_filter_level are Vertex AI-only
+                # fields; omitting them avoids ValueError on the Gemini API path.
             ),
         )
 

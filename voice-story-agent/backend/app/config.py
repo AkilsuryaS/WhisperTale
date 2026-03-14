@@ -50,13 +50,13 @@ class Settings(BaseSettings):
     GEMINI_FLASH_MODEL: str = "gemini-2.5-flash"
 
     # ── Imagen ────────────────────────────────────────────────────────────
-    IMAGEN_MODEL: str = "imagen-3.0-generate-002"
+    IMAGEN_MODEL: str = "imagen-4.0-generate-001"
 
     # ── Gemini Live (bidi-streaming voice) ────────────────────────────────
     GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-001"
 
     # ── Cloud Text-to-Speech ──────────────────────────────────────────────
-    TTS_VOICE_NAME: str = "en-US-Neural2-F"
+    TTS_VOICE_NAME: str = "en-US-Journey-F"
     TTS_LANGUAGE_CODE: str = "en-US"
 
     # ── ADK ───────────────────────────────────────────────────────────────

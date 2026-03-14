@@ -24,7 +24,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { PageState } from "@/hooks/useStoryState";
 import { StoryPage } from "./StoryPage";
 import { HoldAnimation } from "./HoldAnimation";
@@ -108,6 +108,53 @@ export function StoryBook({
   // Build sorted list of page entries (1→5 order).
   const sortedPages = Array.from(pages.entries()).sort(([a], [b]) => a - b);
 
+  // Track which page is visible in the carousel for audio gating.
+  const [activePage, setActivePage] = useState<number>(1);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const slideRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  useEffect(() => {
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const page = Number(
+              (entry.target as HTMLElement).getAttribute("data-page")
+            );
+            if (page) setActivePage(page);
+          }
+        }
+      },
+      { threshold: 0.6 }
+    );
+
+    // Observe all currently-registered slides.
+    for (const el of slideRefs.current.values()) {
+      observerRef.current.observe(el);
+    }
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, []);
+
+  // When new pages arrive, start observing their slide elements.
+  useEffect(() => {
+    if (!observerRef.current) return;
+    for (const [pageNum, el] of slideRefs.current.entries()) {
+      if (el) observerRef.current.observe(el);
+    }
+  }, [sortedPages.length]);
+
+  const registerSlide = (pageNum: number, el: HTMLDivElement | null) => {
+    if (el) {
+      slideRefs.current.set(pageNum, el);
+      observerRef.current?.observe(el);
+    } else {
+      slideRefs.current.delete(pageNum);
+    }
+  };
+
   return (
     <div
       data-testid="story-book"
@@ -129,6 +176,8 @@ export function StoryBook({
         {sortedPages.map(([pageNumber, pageState]) => (
           <div
             key={pageNumber}
+            ref={(el) => registerSlide(pageNumber, el)}
+            data-page={pageNumber}
             data-testid={`story-book-slide-${pageNumber}`}
             className="flex w-full flex-shrink-0 snap-center items-center justify-center"
           >
@@ -136,6 +185,7 @@ export function StoryBook({
               page={pageState}
               pageNumber={pageNumber}
               totalPages={totalPages}
+              isActive={pageNumber === activePage}
             />
           </div>
         ))}

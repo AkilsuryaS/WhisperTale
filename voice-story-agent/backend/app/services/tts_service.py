@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 _RETRY_BACKOFF_SECONDS = 1.0
 _MAX_ATTEMPTS = 2
-_DEFAULT_SPEAKING_RATE = 0.85
+_DEFAULT_SPEAKING_RATE = 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +141,14 @@ class TTSService:
 
         client = self._get_client()
 
-        synthesis_input = texttospeech.SynthesisInput(text=script)
+        # Wrap in SSML for natural emotional pacing; Journey voices interpret
+        # prosody tags natively and produce significantly more expressive output.
+        ssml_script = (
+            "<speak>"
+            f'<prosody rate="95%" pitch="+1st">{script}</prosody>'
+            "</speak>"
+        )
+        synthesis_input = texttospeech.SynthesisInput(ssml=ssml_script)
         voice_params = texttospeech.VoiceSelectionParams(
             language_code=voice_config.language_code,
             name=voice_config.voice_name,

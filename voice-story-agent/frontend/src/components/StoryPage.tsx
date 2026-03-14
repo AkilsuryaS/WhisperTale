@@ -18,7 +18,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import type { PageState } from "@/hooks/useStoryState";
 
 // ---------------------------------------------------------------------------
@@ -32,6 +32,8 @@ export interface StoryPageProps {
   pageNumber: number;
   /** Total number of pages in the story. */
   totalPages: number;
+  /** True when this page is the currently visible slide — gates audio playback. */
+  isActive: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,10 +87,22 @@ function AudioFallback() {
 // StoryPage component
 // ---------------------------------------------------------------------------
 
-export function StoryPage({ page, pageNumber, totalPages }: StoryPageProps) {
+export function StoryPage({ page, pageNumber, totalPages, isActive }: StoryPageProps) {
   const hasText = page.text !== null;
   const hasImage = page.imageUrl !== null;
   const hasAudio = page.audioUrl !== null;
+
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (!audioRef.current) return;
+    if (isActive && page.audioUrl) {
+      audioRef.current.play().catch(() => {});
+    } else {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [isActive, page.audioUrl]);
 
   return (
     <article
@@ -166,9 +180,9 @@ export function StoryPage({ page, pageNumber, totalPages }: StoryPageProps) {
       {hasAudio && !page.audioFailed && (
         // eslint-disable-next-line jsx-a11y/media-has-caption
         <audio
+          ref={audioRef}
           data-testid="page-audio"
           src={page.audioUrl!}
-          autoPlay
           aria-label={`Narration for page ${pageNumber}`}
           className="hidden"
         />

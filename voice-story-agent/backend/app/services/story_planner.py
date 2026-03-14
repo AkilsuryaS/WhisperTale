@@ -161,8 +161,13 @@ TEXT REQUIREMENTS:
   • Must NOT include any content from CONTENT EXCLUSIONS.
 
 NARRATION SCRIPT REQUIREMENTS:
-  • A fluent read-aloud version of the page text suitable for a narrator's voice.
-  • May differ slightly in phrasing for natural speech cadence.
+  • A fluent read-aloud version of the page text suitable for a warm, expressive
+    children's storyteller voice.
+  • Written for a TTS narrator — no stage directions, no parenthetical notes.
+  • Include natural emotional variation: wonder, excitement, gentle suspense.
+  • Use short sentences and pauses (signalled by em-dashes or ellipses) for
+    dramatic effect.
+  • May differ slightly from the text field in phrasing for natural speech cadence.
   • Should roughly match the word count of the text field.
 
 OUTPUT FORMAT — respond ONLY with valid JSON, no prose, no markdown:
@@ -187,7 +192,11 @@ TEXT REQUIREMENTS:
   • Must NOT include any content from CONTENT EXCLUSIONS.
 
 NARRATION SCRIPT REQUIREMENTS:
-  • A fluent read-aloud version of the page text suitable for a narrator's voice.
+  • A fluent read-aloud version of the page text suitable for a warm, expressive
+    children's storyteller voice.
+  • Written for a TTS narrator — no stage directions, no parenthetical notes.
+  • Include natural emotional variation: wonder, excitement, gentle suspense.
+  • Use short sentences and pauses (em-dashes or ellipses) for dramatic effect.
   • Should roughly match the word count of the text field.
 
 OUTPUT FORMAT — respond ONLY with valid JSON, no prose, no markdown:
