@@ -67,17 +67,26 @@ _EXTRACTION_SYSTEM_PROMPT = (
     "You are a children's story setup assistant. "
     "Extract story parameters from what the child or parent says.\n\n"
     "PARAMETERS TO EXTRACT:\n"
-    "1. protagonist_name  — the character's name (e.g. 'Pip', 'Max', 'Luna')\n"
-    "2. protagonist_description — visual description: species, colour, appearance "
-    "(e.g. 'a small blue rabbit with floppy ears')\n"
+    "1. protagonist_name  — the main character name(s). If two characters are\n"
+    "   mentioned, store both names (e.g. 'Akhill and Suji'). Single character:\n"
+    "   just the name (e.g. 'Pip').\n"
+    "2. protagonist_description — visual/character description of the main\n"
+    "   character(s) (e.g. 'a curious fox with amber eyes' or 'Akhill, a bold\n"
+    "   boy, and Suji, a spirited girl'). For two characters combine both.\n"
     "3. setting — where the story takes place "
-    "(e.g. 'the Meadow', 'an underwater kingdom')\n"
+    "(e.g. 'the Meadow', 'a school', 'an underwater kingdom').\n"
     "4. tone — the story mood; MUST be exactly one of: "
-    "\"silly\", \"sleepy\", \"adventurous\", \"warm\", \"curious\"\n\n"
+    "\"silly\", \"sleepy\", \"adventurous\", \"warm\", \"curious\".\n"
+    "5. premise — the core story idea or relationship dynamic the user wants\n"
+    "   (e.g. 'a boy and a girl who hate each other but become friends',\n"
+    "   'a rabbit who wants to reach the moon'). Capture this VERBATIM if given.\n"
+    "   Leave null if the user has not described a plot.\n\n"
     "INSTRUCTIONS:\n"
     "- Extract ONLY what is clearly stated or strongly implied.\n"
-    "- Do NOT repeat parameters that are already collected "
-    "(shown in the prompt); leave those as null.\n"
+    "- ALWAYS re-extract protagonist_name and protagonist_description if the\n"
+    "  user provides or corrects them — even if they were previously collected.\n"
+    "- Do NOT leave already-corrected parameters as null just because they were\n"
+    "  collected before; update them with whatever the user now says.\n"
     "- For tone, map: sleepy/bedtime/gentle → \"sleepy\"; "
     "funny/silly/playful → \"silly\"; exciting/adventure → \"adventurous\"; "
     "cosy/heartwarming → \"warm\"; curious/wonder/exploring → \"curious\".\n"
@@ -87,10 +96,11 @@ _EXTRACTION_SYSTEM_PROMPT = (
     "set follow_up_question to null.\n\n"
     "OUTPUT FORMAT (JSON only — no prose before or after):\n"
     "{\n"
-    '  "protagonist_name": "<name or null>",\n'
+    '  "protagonist_name": "<name(s) or null>",\n'
     '  "protagonist_description": "<description or null>",\n'
     '  "setting": "<setting or null>",\n'
     '  "tone": "<silly|sleepy|adventurous|warm|curious or null>",\n'
+    '  "premise": "<plot idea or null>",\n'
     '  "follow_up_question": "<friendly question or null>"\n'
     "}"
 )
@@ -110,6 +120,7 @@ class ExtractedParams:
     protagonist_description: Optional[str] = None
     setting: Optional[str] = None
     tone: Optional[str] = None
+    premise: Optional[str] = None
     follow_up_question: Optional[str] = None
 
 
@@ -127,6 +138,7 @@ class SetupState:
     protagonist_description: Optional[str] = None
     setting: Optional[str] = None
     tone: Optional[str] = None  # Tone enum value as string, or None
+    premise: Optional[str] = None
     turn_count: int = 0
     raw_transcripts: list[str] = field(default_factory=list)
 
@@ -196,21 +208,23 @@ def _build_extraction_prompt(transcript: str, state: SetupState) -> str:
     """Build the user-turn prompt for the Gemini extraction call."""
     collected: list[str] = []
     if state.protagonist_name:
-        collected.append(f"  - Protagonist name: {state.protagonist_name}")
+        collected.append(f"  - Character name(s): {state.protagonist_name}")
     if state.protagonist_description:
         collected.append(
-            f"  - Protagonist description: {state.protagonist_description}"
+            f"  - Character description: {state.protagonist_description}"
         )
     if state.setting:
         collected.append(f"  - Setting: {state.setting}")
     if state.tone:
         collected.append(f"  - Tone: {state.tone}")
+    if state.premise:
+        collected.append(f"  - Story premise: {state.premise}")
 
     collected_str = "\n".join(collected) if collected else "  (none yet)"
 
     missing: list[str] = []
     if not state.has_protagonist:
-        missing.append("protagonist (name + description)")
+        missing.append("character name(s) + description")
     if not state.has_setting:
         missing.append("setting")
     if not state.has_tone:
@@ -295,10 +309,13 @@ class SetupHandler:
         # ── Merge newly confirmed params; emit story_brief_updated events ─
         newly_confirmed: list[tuple[str, str]] = []
 
-        if extracted.protagonist_name and not state.protagonist_name:
+        # Always update protagonist_name and protagonist_description when Gemini
+        # extracts them — later turns may provide the real names/details that
+        # correct an earlier placeholder or inferred value.
+        if extracted.protagonist_name:
             state.protagonist_name = extracted.protagonist_name
             newly_confirmed.append(("protagonist_name", extracted.protagonist_name))
-        if extracted.protagonist_description and not state.protagonist_description:
+        if extracted.protagonist_description:
             state.protagonist_description = extracted.protagonist_description
             newly_confirmed.append(
                 ("protagonist_description", extracted.protagonist_description)
@@ -309,6 +326,10 @@ class SetupHandler:
         if extracted.tone and not state.tone and extracted.tone in _VALID_TONES:
             state.tone = extracted.tone
             newly_confirmed.append(("tone", extracted.tone))
+        # Capture the user's plot premise; always update if a better one arrives.
+        if extracted.premise:
+            state.premise = extracted.premise
+            newly_confirmed.append(("premise", extracted.premise))
 
         for param, value in newly_confirmed:
             await _emit(ws, "story_brief_updated", parameter=param, value=value)
@@ -383,6 +404,7 @@ class SetupHandler:
                 ),
                 setting=_str_or_none(data.get("setting")),
                 tone=_str_or_none(data.get("tone")),
+                premise=_str_or_none(data.get("premise")),
                 follow_up_question=_str_or_none(data.get("follow_up_question")),
             )
         except Exception as exc:
@@ -433,6 +455,7 @@ class SetupHandler:
             ),
             setting=state.setting or "a magical land",
             tone=tone_enum,
+            premise=state.premise or None,
             raw_setup_transcript=" ".join(state.raw_transcripts),
             confirmed_at=datetime.now(timezone.utc),
             confirmed_by_agent=True,

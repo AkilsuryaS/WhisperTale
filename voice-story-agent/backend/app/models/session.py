@@ -137,6 +137,10 @@ class StoryBrief(BaseModel):
     protagonist_description: str
     setting: str = Field(..., max_length=200)
     tone: Tone
+    # Free-form story premise / plot arc supplied by the user (e.g. "a boy and
+    # a girl who hate each other but become friends").  Optional — present only
+    # when the user explicitly described a plot.
+    premise: Optional[str] = None
     additional_constraints: Optional[list[str]] = None
     # Audit only — MUST NOT appear in any UI response
     raw_setup_transcript: str

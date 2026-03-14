@@ -75,16 +75,18 @@ You are an expert children's story planner. Create a five-beat narrative arc
 for an interactive bedtime story aimed at children aged 4–10.
 
 NARRATIVE STRUCTURE (one beat per page):
-  Page 1 — Opening:      Introduce the protagonist and setting; establish tone.
+  Page 1 — Opening:      Introduce the characters and setting; establish tone.
   Page 2 — Complication: Present the central challenge or quest.
   Page 3 — Rising Action: Deepen the challenge; add a helpful character or twist.
-  Page 4 — Climax:       The protagonist faces the hardest moment and shows courage.
+  Page 4 — Climax:       The characters face the hardest moment and show courage.
   Page 5 — Resolution:   The problem is solved warmly and satisfyingly.
 
 BEAT REQUIREMENTS:
   • Each beat MUST be ≤ 40 words.
   • Each beat must be a complete narrative summary — not a stage direction.
-  • Each beat must reference the protagonist and setting directly.
+  • Each beat must reference the characters and setting directly.
+  • If a STORY PREMISE is provided, the arc MUST follow that premise faithfully —
+    use the character names given, honour the plot dynamic described.
   • Use warm, imaginative, age-appropriate language.
   • Do NOT include any content listed under CONTENT POLICY constraints.
 
@@ -108,12 +110,16 @@ def _build_prompt(brief: StoryBrief, bible: CharacterBible) -> str:
         else "  (none)"
     )
     tone_val = brief.tone if isinstance(brief.tone, str) else brief.tone.value
+    premise_block = (
+        f"Story premise:           {brief.premise}\n" if brief.premise else ""
+    )
     return (
         f"STORY PARAMETERS\n"
-        f"Protagonist name:        {brief.protagonist_name}\n"
-        f"Protagonist description: {brief.protagonist_description}\n"
+        f"Characters:              {brief.protagonist_name}\n"
+        f"Character descriptions:  {brief.protagonist_description}\n"
         f"Setting:                 {brief.setting}\n"
         f"Tone:                    {tone_val}\n"
+        f"{premise_block}"
         f"\n"
         f"CONTENT POLICY — hard constraints (must not appear in any beat):\n"
         f"{exclusion_block}\n"
@@ -158,6 +164,7 @@ TEXT REQUIREMENTS:
   • Written in warm, vivid, age-appropriate prose.
   • Must directly advance the CURRENT BEAT provided.
   • Must maintain narrative continuity with PAGE HISTORY (if any).
+  • Must reference the characters by the names given in the CURRENT BEAT.
   • Must NOT include any content from CONTENT EXCLUSIONS.
 
 NARRATION SCRIPT REQUIREMENTS:

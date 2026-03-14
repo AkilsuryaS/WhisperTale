@@ -114,7 +114,7 @@ export function CaptionBar({
       aria-label="Story captions"
       data-testid="caption-bar"
       className={[
-        "fixed bottom-0 left-0 right-0 z-20",
+        "w-full z-20",
         "flex flex-col",
         "bg-white/80 backdrop-blur-sm shadow-[0_-2px_12px_rgba(0,0,0,0.08)]",
         className,

@@ -278,13 +278,13 @@ export default function StoryAppPage() {
 
       {/* ── StoryBook carousel ─────────────────────────────────────────────
           Padding-bottom:
-            - showFullBar → 288 px (pb-72) to clear CaptionBar + VoiceButton
-            - reading mode → 20 px (pb-5) — just enough so the FAB doesn't
-              clip the very last pixel of the card shadow             */}
+            - showFullBar → 80 px (pb-20) to clear the floating VoiceButton
+              which sits -top-16 (64px) above the in-flow CaptionBar
+            - reading mode → 0   — bar is slid out; FAB is corner-positioned */}
       <div
         className={[
           "flex flex-1 overflow-y-auto transition-all duration-300",
-          showFullBar ? "pb-72" : "pb-5",
+          showFullBar ? "pb-20" : "pb-0",
         ].join(" ")}
         data-testid="story-book-wrapper"
       >
@@ -297,13 +297,25 @@ export default function StoryAppPage() {
         />
       </div>
 
-      {/* ── Caption bar — slides up when bar is expanded ─────────────────── */}
+      {/* ── Caption bar + VoiceButton — slides as a unit ─────────────────── */}
       <div
         className={[
-          "transition-transform duration-300",
+          "transition-transform duration-300 flex-shrink-0 relative",
           showFullBar ? "translate-y-0" : "translate-y-full",
         ].join(" ")}
       >
+        {/* Large VoiceButton — floats above the caption bar */}
+        {showFullBar && (
+          <div className="absolute -top-16 left-1/2 z-30 -translate-x-1/2">
+            <VoiceButton
+              isListening={voice.isListening}
+              steeringWindowOpen={story.steeringWindowOpen}
+              isGenerating={isGenerating}
+              onInterrupt={handleInterrupt}
+              onFeedback={handleFeedback}
+            />
+          </div>
+        )}
         <CaptionBar
           captions={story.captions}
           partialCaption={partialCaption}
@@ -311,19 +323,6 @@ export default function StoryAppPage() {
           safetyAccepted={safetyAccepted}
         />
       </div>
-
-      {/* ── Large VoiceButton — visible only when bar is expanded ─────────── */}
-      {showFullBar && (
-        <div className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2">
-          <VoiceButton
-            isListening={voice.isListening}
-            steeringWindowOpen={story.steeringWindowOpen}
-            isGenerating={isGenerating}
-            onInterrupt={handleInterrupt}
-            onFeedback={handleFeedback}
-          />
-        </div>
-      )}
 
       {/* ── Small floating mic FAB — reading mode (pages visible, bar collapsed) */}
       {story.pages.size > 0 && !barExpanded && (
