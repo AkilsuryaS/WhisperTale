@@ -194,13 +194,13 @@ export default function StoryAppPage() {
     if (voice.sessionStatus === "setup" && !voice.isListening) {
       return { emoji: "⏳", text: "Connecting…", sub: "Setting up your story session" };
     }
-    if (voice.isListening && story.pages.length === 0 && !isGenerating) {
+    if (voice.isListening && story.pages.size === 0 && !isGenerating) {
       return { emoji: "🎤", text: "Listening…", sub: "Tell me about your story! Who's the hero? Where does it happen?" };
     }
     if (voice.isReconnecting) {
       return { emoji: "🔄", text: `Reconnecting… (attempt ${voice.reconnectAttempt})`, sub: "Hang tight, getting back to your story" };
     }
-    if (isGenerating && story.pages.length === 0) {
+    if (isGenerating && story.pages.size === 0) {
       return { emoji: "✨", text: "Creating your story…", sub: "Generating your personalised tale" };
     }
     if (storyComplete) {
@@ -233,7 +233,7 @@ export default function StoryAppPage() {
       )}
 
       {/* Status overlay — shown when no story pages yet */}
-      {statusMessage && story.pages.length === 0 && (
+      {statusMessage && story.pages.size === 0 && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-8 text-center pointer-events-none">
           <span className="text-6xl">{statusMessage.emoji}</span>
           <p className="text-2xl font-semibold text-purple-800">{statusMessage.text}</p>
