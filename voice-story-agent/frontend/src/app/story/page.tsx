@@ -185,6 +185,30 @@ export default function StoryAppPage() {
   // ── Derived state ────────────────────────────────────────────────────────
   const totalPages = 5;
 
+  // ── Status message shown in the center of the screen ───────────────────
+  const statusMessage = (() => {
+    if (voice.error) return null;
+    if (!voice.sessionId && !voice.isListening) {
+      return { emoji: "🎙️", text: "Tap the microphone to begin your story", sub: "" };
+    }
+    if (voice.sessionStatus === "setup" && !voice.isListening) {
+      return { emoji: "⏳", text: "Connecting…", sub: "Setting up your story session" };
+    }
+    if (voice.isListening && story.pages.length === 0 && !isGenerating) {
+      return { emoji: "🎤", text: "Listening…", sub: "Tell me about your story! Who's the hero? Where does it happen?" };
+    }
+    if (voice.isReconnecting) {
+      return { emoji: "🔄", text: `Reconnecting… (attempt ${voice.reconnectAttempt})`, sub: "Hang tight, getting back to your story" };
+    }
+    if (isGenerating && story.pages.length === 0) {
+      return { emoji: "✨", text: "Creating your story…", sub: "Generating your personalised tale" };
+    }
+    if (storyComplete) {
+      return { emoji: "📖", text: "Your story is ready!", sub: "Tap the mic to hear it again" };
+    }
+    return null;
+  })();
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <main
@@ -205,6 +229,38 @@ export default function StoryAppPage() {
           >
             Dismiss
           </button>
+        </div>
+      )}
+
+      {/* Status overlay — shown when no story pages yet */}
+      {statusMessage && story.pages.length === 0 && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 px-8 text-center pointer-events-none">
+          <span className="text-6xl">{statusMessage.emoji}</span>
+          <p className="text-2xl font-semibold text-purple-800">{statusMessage.text}</p>
+          {statusMessage.sub && (
+            <p className="text-base text-purple-500 max-w-sm">{statusMessage.sub}</p>
+          )}
+          {/* Animated dots when listening or generating */}
+          {(voice.isListening || isGenerating) && (
+            <div className="flex gap-2 mt-2">
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="inline-block w-3 h-3 rounded-full bg-purple-400 animate-bounce"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Listening pulse ring around mic when active */}
+      {voice.isListening && (
+        <div className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+          <span className="text-xs font-medium text-purple-600 tracking-wide uppercase animate-pulse">
+            {isGenerating ? "✨ Creating your story…" : "🎤 Listening…"}
+          </span>
         </div>
       )}
 
