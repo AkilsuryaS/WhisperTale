@@ -843,8 +843,10 @@ Implement:
 ### T-022 · StoryPlannerService — expand_page
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/story_planner.py` extended with `expand_page(beat, page_history, bible) -> tuple[str, str]`. Single Gemini 2.5 Flash call per invocation using `_build_expand_page_prompt` which injects protagonist name/species/color/attire/traits, story tone from `StyleBible.mood`, the current beat, `page_history` (or "(this is the first page)" when empty), and all `ContentPolicy.exclusions`. `_validate_page_response` validates the JSON response: both `text` and `narration_script` must be present and non-empty, and `text` word count must be in `[60, 120]`. If validation fails, one strict retry is issued with `_EXPAND_PAGE_STRICT_SYSTEM_PROMPT` (includes explicit recount warning). Both attempts use `_call_gemini` (reuses the existing helper). Raises `StoryPlannerError` after both attempts fail. `_count_words` helper added. 37 mock-based tests (652 total passing, pre-existing integration tests excluded). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/story_planner.py` (extend)
+- `voice-story-agent/backend/tests/test_t022_story_planner_expand_page.py`
 
 **Description**:
 Implement:
