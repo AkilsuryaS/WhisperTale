@@ -23,6 +23,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.routers import pages, sessions
+from app.websocket import story_ws
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +67,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
 app.include_router(sessions.router)
 app.include_router(pages.router)
-
-# WebSocket router will be mounted at /ws/story/{session_id} in T-012.
+app.include_router(story_ws.router)
 
 # ── Lifecycle ─────────────────────────────────────────────────────────────────
 

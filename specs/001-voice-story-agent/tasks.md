@@ -363,6 +363,7 @@ Raise `MediaPersistenceError` on GCS API failure.
 ### T-011 · REST: POST /sessions + GET /sessions/{id} + page endpoints
 
 **Priority**: P1
+**Status**: ✅ Done — 6 REST endpoints implemented across `app/routers/sessions.py` and `app/routers/pages.py`. Shared `get_store()` dependency in `app/dependencies.py`; `ErrorResponse` schema in `app/schemas.py`. Custom HTTPException handler normalises all 4xx to `{"error": str}`. `POST /sessions` returns `wss://{host}/ws/story/{session_id}`. 38 mock-based tests (313 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/routers/sessions.py`
 - `voice-story-agent/backend/app/routers/pages.py`
