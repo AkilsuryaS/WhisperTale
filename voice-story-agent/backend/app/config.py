@@ -20,9 +20,12 @@ automatically from one of these sources (in priority order):
 
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -60,6 +63,9 @@ class Settings(BaseSettings):
     ADK_AGENT_NAME: str = "voice-story-agent"
     # Gemini Live API requires "global" region; falls back to GCP_REGION if unset
     GEMINI_LIVE_REGION: str = "global"
+
+    # ── Google AI API Key (non-Vertex) ────────────────────────────────────
+    GOOGLE_API_KEY: Optional[str] = None
 
     # ── Server ────────────────────────────────────────────────────────────
     CORS_ORIGINS: str = "http://localhost:3000"
@@ -129,3 +135,26 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def get_genai_client(service_name: str = "GenAI") -> "genai.Client":
+    """
+    Build a google.genai.Client using the best available credentials.
+
+    Priority:
+      1. GOOGLE_API_KEY set → AI Studio (generativelanguage) endpoint
+      2. Otherwise          → Vertex AI endpoint (requires GCP_PROJECT_ID + ADC)
+    """
+    from google import genai  # lazy import to avoid circular deps
+
+    if settings.GOOGLE_API_KEY:
+        logger.info("%s: using Google AI (API key) endpoint", service_name)
+        return genai.Client(api_key=settings.GOOGLE_API_KEY)
+
+    project_id = settings.require_gcp(service_name)
+    logger.info("%s: using Vertex AI endpoint (project=%s)", service_name, project_id)
+    return genai.Client(
+        vertexai=True,
+        project=project_id,
+        location=settings.GCP_REGION,
+    )

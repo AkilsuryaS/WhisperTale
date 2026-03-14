@@ -51,7 +51,7 @@ from typing import Any
 from google import genai
 from google.genai import types as genai_types
 
-from app.config import settings
+from app.config import settings, get_genai_client
 from app.exceptions import StoryPlannerError
 from app.models.character_bible import CharacterBible, ContentPolicy
 from app.models.session import StoryBrief
@@ -378,12 +378,7 @@ class StoryPlannerService:
 
     def _get_client(self) -> genai.Client:
         if self._client is None:
-            project_id = settings.require_gcp("StoryPlannerService")
-            self._client = genai.Client(
-                vertexai=True,
-                project=project_id,
-                location=settings.GCP_REGION,
-            )
+            self._client = get_genai_client("StoryPlannerService")
         return self._client
 
     async def _call_gemini(self, model: str, prompt: str) -> dict[str, Any]:

@@ -33,7 +33,7 @@ from typing import Any
 from google import genai
 from google.genai import types as genai_types
 
-from app.config import settings
+from app.config import settings, get_genai_client
 from app.models.safety import SAFE_FALLBACK_REWRITE, SafetyCategory, SafetyResult
 
 logger = logging.getLogger(__name__)
@@ -110,12 +110,7 @@ class SafetyService:
 
     def _get_client(self) -> genai.Client:
         if self._client is None:
-            project_id = settings.require_gcp("SafetyService")
-            self._client = genai.Client(
-                vertexai=True,
-                project=project_id,
-                location=settings.GCP_REGION,
-            )
+            self._client = get_genai_client("SafetyService")
         return self._client
 
     async def _call_gemini(self, utterance: str) -> dict[str, Any]:
