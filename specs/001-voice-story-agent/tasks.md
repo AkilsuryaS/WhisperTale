@@ -1433,9 +1433,11 @@ After each `page_complete` event:
 ### T-033 · Tone carry-forward in page generation
 
 **Priority**: P2
+**Status**: ✅ Done — `app/services/character_bible_service.py` extended with `update_mood(session_id, new_mood, command_id=None)`: fetches current `CharacterBible` from Firestore (raises `CharacterBibleServiceError` if not found); constructs a new `StyleBible` with the updated `mood` and `last_updated_by_command_id`; atomically persists both the standalone `style_bible/main` document (via `save_style_bible`) and the embedded `style_bible` field in `character_bible/main` (via `update_character_bible_field`). All Firestore errors are wrapped in `CharacterBibleServiceError`. `app/websocket/steering_handler.py` `SteeringHandler._apply_command` extended: after persisting the `VoiceCommand`, when `command_type == tone_change`, calls `character_bible_svc.update_mood(session_id, new_mood=interpreted_intent, command_id=command.command_id)`; failure is logged and swallowed (does not abort `voice_command_applied`). Subsequent `expand_page` calls automatically receive the updated mood because `page_orchestrator.run_page` reads `CharacterBible` from Firestore on each page (which now has the updated embedded `style_bible`). New session isolation is guaranteed by design — `Session.page_history` defaults to `[]`, `ContentPolicy` is freshly initialised by `CharacterBibleService.initialise` with only `BASE_EXCLUSIONS`, and no cross-session state exists. 20 mock-based tests in `test_t033_tone_carry_forward.py` covering: `update_mood` persists standalone + embedded StyleBible, command_id stored, other fields preserved, new mood reflected, raised on missing bible, raised on Firestore error, works without command_id; `SteeringHandler` calls `update_mood` for `tone_change`, does not call for `pacing_change`, failure swallowed (voice_command_applied still emitted), command_id forwarded; new session isolation (empty page_history, empty arc, fresh ContentPolicy, no derived_from_safety_decisions, independent page_history lists); `expand_page` prompt contains updated mood. 897 total passing. Ruff clean.
 **Files**:
-- `voice-story-agent/backend/app/services/story_planner.py` (extend)
 - `voice-story-agent/backend/app/services/character_bible_service.py` (extend)
+- `voice-story-agent/backend/app/websocket/steering_handler.py` (extend)
+- `voice-story-agent/backend/tests/test_t033_tone_carry_forward.py`
 
 **Description**:
 When a `tone_change` `VoiceCommand` is accepted:
