@@ -65,6 +65,8 @@ class Session(BaseModel):
     current_page: int = Field(default=0, ge=0, le=5)
     # 5-element beat summaries; empty list is valid during setup phase
     story_arc: list[str] = Field(default_factory=list)
+    # First-25-word snippet accumulated after each page completes (T-032)
+    page_history: list[str] = Field(default_factory=list)
     # Set only when status = error
     error_message: Optional[str] = None
 

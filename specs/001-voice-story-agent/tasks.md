@@ -1405,9 +1405,12 @@ Implement `SteeringHandler`:
 ### T-032 · Page history accumulation
 
 **Priority**: P2
+**Status**: ✅ Done — `app/models/session.py` extended with `page_history: list[str] = Field(default_factory=list)` field on `Session` (persisted to Firestore, returned by `GET /sessions/{id}`, survives round-trip via `model_dump(mode="json")`). `app/services/session_store.py` extended with `update_page_history(session_id, page_history)` — fetches session (raises `SessionNotFoundError` if absent), writes the list + bumps `updated_at`. `app/websocket/story_ws.py` `_page_generation_loop` refactored: (a) accepts new `initial_page_history: list[str] | None` parameter (seeded from `Session.page_history` for reconnect recovery); (b) maintains an **in-memory** `page_history` list that grows after each completed page — after `page_task` finishes, fetches the saved `Page` from the store and appends `" ".join(page_text.split()[:25])` (first 25 words) as the history snippet; empty-text pages are skipped; (c) calls `store.update_page_history` after each successful append so the entry survives reconnect; (d) passes the accumulated `page_history` list directly to `run_page` on every iteration (instead of re-fetching from Firestore). `_turn_loop` updated to pass `initial_page_history=list(session.page_history)` when spawning the loop. Removed old Firestore-per-page-history-fetch in favour of the in-memory approach. 17 mock-based tests in `test_t032_page_history_accumulation.py` covering: Session model default/populated/serialisation, 25-word snippet edge cases (long/short/exact), page 1 receives empty history, pages 2/3/5 receive growing history (spec "done when" criteria), `update_page_history` called once per page, snippet correctness, monotonically growing list, empty-text skip, initial seeding for reconnect, combined initial+new entries, and `story_complete` still final event. 876 total passing (1 pre-existing flaky safety test excluded). Ruff clean.
 **Files**:
+- `voice-story-agent/backend/app/models/session.py` (extend)
+- `voice-story-agent/backend/app/services/session_store.py` (extend)
 - `voice-story-agent/backend/app/websocket/story_ws.py` (extend)
-- `voice-story-agent/backend/app/services/session_store.py` (extend if needed)
+- `voice-story-agent/backend/tests/test_t032_page_history_accumulation.py`
 
 **Description**:
 After each `page_complete` event:
