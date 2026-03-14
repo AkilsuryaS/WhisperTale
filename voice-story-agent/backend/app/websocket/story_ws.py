@@ -642,6 +642,15 @@ async def _turn_loop(
                 await ws.send_bytes(turn.audio_bytes)
 
             if turn.is_final and turn.role == "user":
+                logger.info(
+                    "voice command received: final user turn",
+                    extra={
+                        "event_type": "voice_command_received",
+                        "session_id": session_id,
+                        "command": "user_turn",
+                        "safety_awaiting_ack": safety_gate.awaiting_ack,
+                    },
+                )
                 if safety_gate.awaiting_ack:
                     await _complete_safety_ack(ws, session_id, store, safety_gate)
                 else:
@@ -676,6 +685,14 @@ async def _turn_loop(
                             try:
                                 session = await store.get_session(session_id)
                                 if session.status == SessionStatus.generating:
+                                    logger.info(
+                                        "session status changed to generating",
+                                        extra={
+                                            "event_type": "session_status_changed",
+                                            "session_id": session_id,
+                                            "status": "generating",
+                                        },
+                                    )
                                     page_loop_started = True
                                     page_loop_task = asyncio.create_task(
                                         _page_generation_loop(
@@ -755,7 +772,12 @@ async def story_websocket(
     # ── Token validation ──────────────────────────────────────────────────
     if not _is_valid_token(token):
         logger.warning(
-            "WS rejected — missing or empty token (session=%s)", session_id
+            "WS rejected — missing or empty token",
+            extra={
+                "event_type": "ws_rejected",
+                "session_id": session_id,
+                "reason": "invalid_token",
+            },
         )
         await websocket.close(code=4001)
         return
@@ -764,13 +786,28 @@ async def story_websocket(
     try:
         session = await store.get_session(session_id)
     except SessionNotFoundError:
-        logger.warning("WS rejected — session not found (session=%s)", session_id)
+        logger.warning(
+            "WS rejected — session not found",
+            extra={
+                "event_type": "ws_rejected",
+                "session_id": session_id,
+                "reason": "session_not_found",
+            },
+        )
         await emit(websocket, "session_error", code="session_not_found")
         await websocket.close(code=4001)
         return
 
     # ── Emit connected ────────────────────────────────────────────────────
     await emit(websocket, "connected", session_status=session.status)
+    logger.info(
+        "WebSocket connected",
+        extra={
+            "event_type": "ws_connect",
+            "session_id": session_id,
+            "session_status": str(session.status),
+        },
+    )
 
     # ── Per-session safety gate ───────────────────────────────────────────
     safety_gate = _SafetyGate()
@@ -846,6 +883,14 @@ async def story_websocket(
                     )
                     await emit(websocket, "session_error", code="voice_start_failed")
                 else:
+                    logger.info(
+                        "voice command received and applied: session_start",
+                        extra={
+                            "event_type": "voice_command_applied",
+                            "session_id": session_id,
+                            "command": "session_start",
+                        },
+                    )
                     if turn_loop_task is None or turn_loop_task.done():
                         turn_loop_task = asyncio.create_task(
                             _turn_loop(
@@ -914,6 +959,14 @@ async def story_websocket(
                     logger.info(
                         "WS interrupt received (session=%s)", session_id
                     )
+                    logger.info(
+                        "voice command received and applied: interrupt",
+                        extra={
+                            "event_type": "voice_command_applied",
+                            "session_id": session_id,
+                            "command": "interrupt",
+                        },
+                    )
                 else:
                     logger.debug(
                         "WS interrupt ignored — already in steering window "
@@ -928,6 +981,15 @@ async def story_websocket(
                     str(data.get("raw_transcript", ""))
                     if isinstance(data, dict)
                     else ""
+                )
+                logger.info(
+                    "voice command received: voice_feedback",
+                    extra={
+                        "event_type": "voice_command_received",
+                        "session_id": session_id,
+                        "command": "voice_feedback",
+                        "in_steering_window": page_loop_state.in_steering_window,
+                    },
                 )
                 synthetic_turn = VoiceTurn(
                     role="user",
@@ -982,4 +1044,10 @@ async def story_websocket(
                 pass
 
         await voice_svc.end(session_id)
-        logger.info("WS handler cleaned up (session=%s)", session_id)
+        logger.info(
+            "WebSocket disconnected",
+            extra={
+                "event_type": "ws_disconnect",
+                "session_id": session_id,
+            },
+        )
