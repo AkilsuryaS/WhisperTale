@@ -6,13 +6,18 @@ Public interface (T-013):
     async def send_audio(session_id: str, pcm_bytes: bytes) -> None
     async def end(session_id: str) -> None
 
+Public interface (T-014):
+    async def stream_turns(session_id: str) -> AsyncIterator[VoiceTurn]
+    async def speak(session_id: str, text: str) -> None
+
 Design:
 - Active sessions are held in an in-memory dict keyed by session_id.
 - Each entry stores (AsyncSession, AsyncExitStack) so the async context
   manager from AsyncLive.connect() stays open across multiple calls.
 - The genai.Client is injectable via the constructor for testability.
 - No references to ADK/SDK private classes (names starting with `_`).
-- VoiceSessionNotFoundError → send_audio / end on a session that is not open.
+- VoiceSessionNotFoundError → send_audio / end / stream_turns / speak on a session
+  that is not open.
 - VoiceSessionError         → any Google GenAI API failure.
 
 Audio format for send_audio:
@@ -22,9 +27,11 @@ Audio format for send_audio:
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import logging
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, AsyncIterator, Literal
 
 from google import genai
 from google.genai import types as genai_types
@@ -38,6 +45,25 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _PCM_MIME_TYPE = "audio/pcm;rate=16000"
+_SPEAK_TIMEOUT_SECONDS = 10.0
+
+
+@dataclass
+class VoiceTurn:
+    """A single normalised turn emitted by stream_turns().
+
+    Attributes:
+        role:        "user" for speech from the child; "agent" for Gemini responses.
+        transcript:  Text content of the turn (may be empty for audio-only agent turns).
+        audio_bytes: Raw PCM/audio bytes for agent turns; None for user turns.
+        is_final:    False while the transcript is still being streamed; True once
+                     the turn is complete and no further updates will follow.
+    """
+
+    role: Literal["user", "agent"]
+    transcript: str
+    audio_bytes: bytes | None
+    is_final: bool
 
 
 def _build_client() -> genai.Client:
@@ -182,3 +208,136 @@ class VoiceSessionService:
             )
 
         logger.info("VoiceSession closed (session=%s)", session_id)
+
+    async def stream_turns(self, session_id: str) -> AsyncIterator[VoiceTurn]:
+        """
+        Yield VoiceTurn objects as the ADK stream delivers events.
+
+        Normalises all SDK-specific event shapes so callers never depend on
+        ADK internals.  The sequence typically looks like:
+
+          1. One or more partial user transcripts  (is_final=False, role="user")
+          2. A final user transcript               (is_final=True,  role="user")
+          3. One or more agent turns with audio    (is_final=True,  role="agent")
+
+        Raises VoiceSessionNotFoundError if *session_id* is not open.
+        Raises VoiceSessionError on SDK receive failures.
+        """
+        if session_id not in self._sessions:
+            raise VoiceSessionNotFoundError(session_id)
+
+        session, _ = self._sessions[session_id]
+
+        try:
+            async for response in session.receive():
+                server_content = getattr(response, "server_content", None)
+                if server_content is None:
+                    continue
+
+                # --- User input transcription (partial or final) ---
+                input_tx = getattr(server_content, "input_transcription", None)
+                if input_tx is not None:
+                    text = getattr(input_tx, "text", "") or ""
+                    # The SDK field may be "finished" or "is_final" depending on version
+                    finished = getattr(input_tx, "finished", None)
+                    if finished is None:
+                        finished = getattr(input_tx, "is_final", True)
+                    yield VoiceTurn(
+                        role="user",
+                        transcript=text,
+                        audio_bytes=None,
+                        is_final=bool(finished),
+                    )
+
+                # --- Agent model turn ---
+                model_turn = getattr(server_content, "model_turn", None)
+                if model_turn is not None:
+                    audio_chunks: list[bytes] = []
+                    text_parts: list[str] = []
+                    for part in getattr(model_turn, "parts", []):
+                        inline = getattr(part, "inline_data", None)
+                        if inline is not None:
+                            chunk = getattr(inline, "data", b"") or b""
+                            if chunk:
+                                audio_chunks.append(chunk)
+                        part_text = getattr(part, "text", None)
+                        if part_text:
+                            text_parts.append(part_text)
+
+                    turn_complete = bool(
+                        getattr(server_content, "turn_complete", False)
+                    )
+                    yield VoiceTurn(
+                        role="agent",
+                        transcript="".join(text_parts),
+                        audio_bytes=b"".join(audio_chunks) if audio_chunks else None,
+                        is_final=turn_complete,
+                    )
+
+        except (VoiceSessionNotFoundError, VoiceSessionError):
+            raise
+        except Exception as exc:
+            raise VoiceSessionError(
+                f"stream_turns failed for session '{session_id}': {exc}",
+                cause=exc,
+            ) from exc
+
+    async def speak(self, session_id: str, text: str) -> None:
+        """
+        Send *text* to the Gemini Live model for TTS and wait until the agent's
+        audio response has been fully delivered.
+
+        Applies a 10 s timeout; raises VoiceSessionError if the response does
+        not complete in time.
+
+        Raises VoiceSessionNotFoundError if *session_id* is not open.
+        Raises VoiceSessionError on SDK API failures or timeout.
+        """
+        if session_id not in self._sessions:
+            raise VoiceSessionNotFoundError(session_id)
+
+        session, _ = self._sessions[session_id]
+
+        # Send the text prompt to the model for voice synthesis.
+        try:
+            await session.send_client_content(
+                turns=[
+                    genai_types.Content(
+                        parts=[genai_types.Part(text=text)],
+                        role="user",
+                    )
+                ],
+                turn_complete=True,
+            )
+        except Exception as exc:
+            raise VoiceSessionError(
+                f"speak failed to send text for session '{session_id}': {exc}",
+                cause=exc,
+            ) from exc
+
+        # Wait for the agent to signal that its audio response is complete.
+        async def _await_turn_complete() -> None:
+            async for response in session.receive():
+                server_content = getattr(response, "server_content", None)
+                if server_content is None:
+                    continue
+                if getattr(server_content, "turn_complete", False):
+                    return
+
+        try:
+            await asyncio.wait_for(
+                _await_turn_complete(), timeout=_SPEAK_TIMEOUT_SECONDS
+            )
+        except asyncio.TimeoutError as exc:
+            raise VoiceSessionError(
+                f"speak timed out after {_SPEAK_TIMEOUT_SECONDS}s waiting for "
+                f"audio response for session '{session_id}'",
+                cause=exc,
+            ) from exc
+        except (VoiceSessionNotFoundError, VoiceSessionError):
+            raise
+        except Exception as exc:
+            raise VoiceSessionError(
+                f"speak receive loop failed for session '{session_id}': {exc}",
+                cause=exc,
+            ) from exc
