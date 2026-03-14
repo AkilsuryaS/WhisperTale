@@ -1606,8 +1606,10 @@ Props: `captions`, `safetyRewrite`, `safetyAccepted`.
 ### T-039 · StoryPage component
 
 **Priority**: P1
+**Status**: ✅ Done — `voice-story-agent/frontend/src/components/StoryPage.tsx` implemented as a `"use client"` React component. Props: `page: PageState`, `pageNumber: number`, `totalPages: number`. Renders four areas: (1) **Page number indicator** — `data-testid="page-number-indicator"` showing "Page N of M"; (2) **Illustration area** — `<img data-testid="page-illustration">` with `src=imageUrl` and descriptive `alt` text when `imageUrl` is set and `illustrationFailed` is false; animated skeleton (`data-testid="illustration-skeleton"`) while no image yet; `PaintingPlaceholder` SVG component (`data-testid="illustration-placeholder"`, `aria-label="Illustration unavailable"`) when `illustrationFailed=true` (img hidden); (3) **Story text area** — `data-testid="story-text-area"` with `transition-opacity duration-700` — `opacity-100` when `page.text` is non-null, `opacity-0` when null; renders `<p data-testid="page-text">` or animated text skeleton (`data-testid="text-skeleton"`); (4) **Audio player** — `<audio data-testid="page-audio" autoPlay src={audioUrl} className="hidden">` when `audioUrl` is set and `audioFailed` is false; `<AudioFallback data-testid="audio-fallback">` "Narration unavailable — read along above!" when `audioFailed=true`; nothing shown when `audioUrl` is null and `audioFailed` is false. No `any` in public API; `tsc --noEmit` exits 0. 31 Jest tests in `src/components/__tests__/StoryPage.test.tsx` covering all done-when criteria: text-only render (no audio, no img, skeleton shown), illustration placeholder present/absent/overrides-img, audio element has `autoplay`+correct `src`, audio fallback present/absent, text fade-in via opacity class transitions, text skeleton shown/hidden, text visible after null→string rerender, page number "Page 1 of 5"/"Page 3 of 5", aria-label on article, img src/alt, skeleton hidden when imageUrl set. 162 total passing. `tsc --noEmit` exits 0.
 **Files**:
-- `voice-story-agent/frontend/src/components/StoryPage.tsx`
+- `voice-story-agent/frontend/src/components/StoryPage.tsx` (new)
+- `voice-story-agent/frontend/src/components/__tests__/StoryPage.test.tsx` (new)
 
 **Description**:
 Renders one page of the storybook:
