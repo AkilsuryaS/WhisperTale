@@ -1547,8 +1547,12 @@ React hook that accumulates the complete story state:
 ### T-037 · VoiceButton component
 
 **Priority**: P1
+**Status**: ✅ Done — `voice-story-agent/frontend/src/components/VoiceButton.tsx` implemented as a `"use client"` React component. Props: `isListening`, `steeringWindowOpen`, `isGenerating`, `onInterrupt`, `onFeedback`, `className`. Four visual states: (1) **Idle** — solid purple circle, `aria-label="Tap to speak"`, `aria-pressed=false`, no ring; (2) **Listening** — purple circle + purple pulsing ring (`animate-gentle-pulse` + `border-purple-400`), `aria-label="Listening — tap to stop"`, `aria-pressed=true`; (3) **Steering window open** — amber circle (`bg-amber-500`) + amber pulsing ring (`border-amber-400`), `aria-label="Speak now to change the story"`, `aria-pressed=true`; (4) **Disabled** — grey circle (`bg-gray-300`), `aria-label` contains "disabled", `aria-disabled=true`, `disabled` HTML attribute, no ring. Disabled condition: `isGenerating && !steeringWindowOpen` (steering window always overrides to allow interruption). Click logic: if `isDisabled` → no-op; else calls `onFeedback`. Ring rendered as a `<span data-testid="voice-button-ring">` with `aria-hidden="true"`, `animate-gentle-pulse` Tailwind class, and colour-coded border. `jest.config.ts` updated to add `jsx: "react-jsx"` to ts-jest tsconfig so `.tsx` component tests compile. `@testing-library/user-event` installed. 32 Jest tests in `src/components/__tests__/VoiceButton.test.tsx` covering all done-when criteria: renders in all 4 states; ARIA `aria-label`, `aria-pressed`, `aria-disabled` correct per state; `onInterrupt`/`onFeedback` routing and disabled guard; ring present/absent correct per state; ring has `animate-gentle-pulse`, amber or purple class; button colour classes per state. 104 total passing. `tsc --noEmit` exits 0.
 **Files**:
-- `voice-story-agent/frontend/src/components/VoiceButton.tsx`
+- `voice-story-agent/frontend/src/components/VoiceButton.tsx` (new)
+- `voice-story-agent/frontend/src/components/__tests__/VoiceButton.test.tsx` (new)
+- `voice-story-agent/frontend/jest.config.ts` (extend — add `jsx: "react-jsx"`)
+- `voice-story-agent/frontend/package.json` (extend — @testing-library/user-event)
 
 **Description**:
 Accessible mic toggle button:

@@ -17,8 +17,10 @@ const config: Config = {
       "ts-jest",
       {
         tsconfig: {
-          // Tests run in Node/jsdom; allow importing .ts files
+          // Tests run in Node/jsdom
           module: "commonjs",
+          // Enable JSX transform for .tsx component tests
+          jsx: "react-jsx",
         },
       },
     ],
