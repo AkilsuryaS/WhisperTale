@@ -391,23 +391,35 @@ async def _page_generation_loop(
     voice_svc: VoiceSessionService | None = None,
     steering_window_seconds: float = _STEERING_WINDOW_SECONDS,
     page_loop_state: _PageLoopState | None = None,
+    initial_page_history: list[str] | None = None,
 ) -> None:
     """
     Run the full 5-page story generation loop after setup is complete.
 
     Sequence for each page:
-      1. Fetch the current session to get the story arc and page history.
+      1. Fetch the current session to get the story arc.
       2. Call run_page (emits page events via the WebSocket).
          If ``page_loop_state.interrupt_event`` is set mid-narration, skip
          directly to the steering window (T-031).
-      3. Open a steering window via SteeringHandler, passing the shared
+      3. After page_complete: append first-25-word snippet of page text to the
+         in-memory page_history list and persist it to the Session document
+         (T-032).  The accumulated list is passed to all subsequent expand_page
+         calls for narrative coherence.
+      4. Open a steering window via SteeringHandler, passing the shared
          ``steering_turn_queue`` so voice_feedback messages reach it.
     After all 5 pages: emit story_complete, update session status to complete.
+
+    Args:
+        initial_page_history: Pre-seeded history from ``Session.page_history``
+                              used when the loop is restarted after a reconnect.
     """
     from app.websocket.page_orchestrator import run_page
 
     # Ensure we have a state object (may be None when called from tests or REST)
     loop_state = page_loop_state or _PageLoopState()
+
+    # T-032: in-memory page history; seeded from persisted data on reconnect
+    page_history: list[str] = list(initial_page_history) if initial_page_history else []
 
     async def ws_emit(event_type: str, **fields: object) -> None:
         try:
@@ -417,7 +429,7 @@ async def _page_generation_loop(
 
     try:
         for page_number in range(1, 6):
-            # Re-fetch session to get latest story_arc and current_page
+            # Re-fetch session to get latest story_arc
             try:
                 session = await store.get_session(session_id)
             except Exception as exc:
@@ -440,15 +452,6 @@ async def _page_generation_loop(
                 break
 
             beat = session.story_arc[page_number - 1]
-
-            # Build page_history from text of prior completed pages
-            page_history: list[str] = []
-            for pn in range(1, page_number):
-                pg = await store.get_page(session_id, pn)
-                if pg is not None and pg.text:
-                    sentences = pg.text.split(".")
-                    summary = sentences[0].strip() + "." if sentences else pg.text
-                    page_history.append(summary)
 
             # T-031: clear interrupt flag before starting page narration
             loop_state.interrupt_event.clear()
@@ -496,6 +499,34 @@ async def _page_generation_loop(
                     session_id,
                     page_number,
                 )
+
+            # T-032: accumulate page history from the completed page text
+            # (only when page completed normally, not on interrupt before text)
+            if page_task in done and not page_task.cancelled():
+                try:
+                    completed_page = await store.get_page(session_id, page_number)
+                    if completed_page is not None and completed_page.text:
+                        snippet = " ".join(
+                            completed_page.text.split()[:25]
+                        )
+                        page_history.append(snippet)
+                        # Persist to Session for reconnect recovery
+                        await store.update_page_history(session_id, page_history)
+                        logger.debug(
+                            "_page_generation_loop: page_history updated "
+                            "(session=%s, page=%d, entries=%d)",
+                            session_id,
+                            page_number,
+                            len(page_history),
+                        )
+                except Exception as exc:
+                    logger.error(
+                        "_page_generation_loop: page_history update failed "
+                        "(session=%s, page=%d): %s",
+                        session_id,
+                        page_number,
+                        exc,
+                    )
 
             # Steering window between pages (not after the last page)
             if page_number < 5:
@@ -659,6 +690,10 @@ async def _turn_loop(
                                             safety_svc=safety_svc,
                                             voice_svc=voice_svc,
                                             page_loop_state=page_loop_state,
+                                            # T-032: seed history from persisted Session
+                                            initial_page_history=list(
+                                                session.page_history
+                                            ),
                                         )
                                     )
                             except Exception as exc:

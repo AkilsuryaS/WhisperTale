@@ -228,6 +228,26 @@ class SessionStore:
             }
         )
 
+    async def update_page_history(
+        self, session_id: str, page_history: list[str]
+    ) -> None:
+        """
+        Persist the current page_history list on the Session document (T-032).
+
+        Called after each page_complete event so that a reconnecting client can
+        resume the story loop with the accumulated history entries.
+        """
+        ref = self._session_ref(session_id)
+        doc = await ref.get()
+        if not doc.exists:
+            raise SessionNotFoundError(session_id)
+        await ref.update(
+            {
+                "page_history": page_history,
+                "updated_at": _utc_now().isoformat(),
+            }
+        )
+
     # ------------------------------------------------------------------
     # StoryBrief
     # ------------------------------------------------------------------
