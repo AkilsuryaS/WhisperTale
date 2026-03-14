@@ -18,6 +18,22 @@ T-015  Wire VoiceSessionService into the handler:
          4. transcript_input text message → synthetic VoiceTurn injected into
             _route_user_turn, producing a `turn_detected` event.
 
+T-017  Safety gate wired into every final user turn before pipeline routing:
+         1. SafetyService.evaluate() called on every is_final=True user turn.
+         2. If safe=False:
+              a. Emit `safety_rewrite` (decision_id, turn_id, detected_category,
+                 proposed_rewrite, phase).
+              b. Call VoiceSessionService.speak(proposed_rewrite) so the child
+                 hears the safe alternative.
+              c. Set gate into awaiting-acknowledgement state.
+              d. Next final user turn (from ADK stream or transcript_input) is
+                 treated as acceptance → persist SafetyDecision(user_accepted=True),
+                 update ContentPolicy, emit `safety_accepted`.
+         3. If safe=True: proceed to normal routing (_route_user_turn).
+         4. WebSocket disconnect while gate is pending →
+              SafetyDecision(user_accepted=False) persisted; session status set
+              to `error` when phase=setup.
+
 Token validation (stub):
     Any non-empty, non-whitespace token string is accepted.
     Real JWT verification is wired in a later task.
@@ -32,13 +48,27 @@ import asyncio
 import json
 import logging
 import uuid
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 
-from app.dependencies import get_store, get_voice_service
-from app.exceptions import SessionNotFoundError, VoiceSessionError, VoiceSessionNotFoundError
+from app.dependencies import get_safety_service, get_store, get_voice_service
+from app.exceptions import (
+    SessionNotFoundError,
+    VoiceSessionError,
+    VoiceSessionNotFoundError,
+)
+from app.models.safety import (
+    SAFE_FALLBACK_REWRITE,
+    SafetyCategory,
+    SafetyDecision,
+    SafetyPhase,
+)
+from app.models.session import SessionStatus
 from app.services.adk_voice_service import VoiceTurn, VoiceSessionService
+from app.services.safety_service import SafetyService
 from app.services.session_store import SessionStore
 
 logger = logging.getLogger(__name__)
@@ -75,7 +105,180 @@ def _is_valid_token(token: Optional[str]) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Pipeline routing (T-015 stub)
+# Safety gate state (per-session, mutable)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _SafetyGate:
+    """
+    Per-session safety gate state shared between _turn_loop and the main
+    WebSocket handler.
+
+    When `awaiting_ack` is True the next final user turn (from the ADK stream
+    or a transcript_input message) is treated as acceptance of the safety
+    rewrite rather than a new story premise.
+
+    asyncio is single-threaded and cooperative, so reads/writes to this object
+    inside awaited coroutines are safe without additional locking.
+    """
+
+    awaiting_ack: bool = False
+    decision_id: uuid.UUID = field(default_factory=uuid.uuid4)
+    turn_uuid: Optional[uuid.UUID] = None
+    raw_input: str = ""
+    category: Optional[SafetyCategory] = None
+    proposed_rewrite: str = ""
+    triggered_at: Optional[datetime] = None
+
+
+# ---------------------------------------------------------------------------
+# Safety gate helpers
+# ---------------------------------------------------------------------------
+
+
+async def _begin_safety_rewrite(
+    ws: WebSocket,
+    turn: VoiceTurn,
+    turn_id: str,
+    session_id: str,
+    voice_svc: VoiceSessionService,
+    gate: _SafetyGate,
+    proposed_rewrite: str,
+    category: Optional[SafetyCategory],
+) -> None:
+    """
+    Arm the safety gate, emit `safety_rewrite`, and have the agent speak the
+    child-safe alternative premise.
+    """
+    gate.awaiting_ack = True
+    gate.decision_id = uuid.uuid4()
+    gate.turn_uuid = uuid.UUID(turn_id)
+    gate.raw_input = turn.transcript
+    gate.category = category
+    gate.proposed_rewrite = proposed_rewrite
+    gate.triggered_at = datetime.now(timezone.utc)
+
+    await emit(
+        ws,
+        "safety_rewrite",
+        decision_id=str(gate.decision_id),
+        turn_id=turn_id,
+        detected_category=category.value if category else None,
+        proposed_rewrite=proposed_rewrite,
+        phase="setup",
+    )
+
+    try:
+        await voice_svc.speak(session_id, proposed_rewrite)
+    except VoiceSessionError as exc:
+        logger.error(
+            "speak failed during safety rewrite (session=%s): %s", session_id, exc
+        )
+
+
+async def _complete_safety_ack(
+    ws: WebSocket,
+    session_id: str,
+    store: SessionStore,
+    gate: _SafetyGate,
+) -> None:
+    """
+    Process a safety-gate acknowledgement: disarm the gate, persist
+    SafetyDecision(user_accepted=True), append the exclusion to ContentPolicy,
+    and emit `safety_accepted`.
+    """
+    gate.awaiting_ack = False
+
+    exclusion = (
+        f"no {gate.category.value}" if gate.category else "no unsafe content"
+    )
+
+    sd = SafetyDecision(
+        decision_id=gate.decision_id,
+        turn_id=gate.turn_uuid,
+        phase=SafetyPhase.setup,
+        raw_input=gate.raw_input,
+        detected_category=gate.category,
+        proposed_rewrite=gate.proposed_rewrite,
+        user_accepted=True,
+        final_premise=gate.proposed_rewrite,
+        exclusion_added=exclusion,
+        triggered_at=gate.triggered_at,
+    )
+
+    try:
+        await store.save_safety_decision(session_id, sd)
+        bible = await store.get_character_bible(session_id)
+        if bible is not None:
+            updated_exclusions = list(bible.content_policy.exclusions) + [exclusion]
+            updated_decision_ids = list(
+                bible.content_policy.derived_from_safety_decisions
+            ) + [str(sd.decision_id)]
+            await store.update_character_bible_field(
+                session_id, "content_policy.exclusions", updated_exclusions
+            )
+            await store.update_character_bible_field(
+                session_id,
+                "content_policy.derived_from_safety_decisions",
+                updated_decision_ids,
+            )
+    except Exception as exc:
+        logger.error(
+            "Failed to persist safety decision or update ContentPolicy "
+            "(session=%s, error_type=%s)",
+            session_id,
+            type(exc).__name__,
+        )
+
+    await emit(
+        ws,
+        "safety_accepted",
+        decision_id=str(sd.decision_id),
+        final_premise=sd.proposed_rewrite,
+    )
+
+
+async def _persist_abandoned_safety_decision(
+    session_id: str,
+    store: SessionStore,
+    gate: _SafetyGate,
+) -> None:
+    """
+    Called when the WebSocket closes while the safety gate is still open.
+    Persists SafetyDecision(user_accepted=False) and marks the session as
+    `error` (setup-phase safety abandonment).
+    """
+    if not gate.awaiting_ack:
+        return
+
+    sd = SafetyDecision(
+        decision_id=gate.decision_id,
+        turn_id=gate.turn_uuid,
+        phase=SafetyPhase.setup,
+        raw_input=gate.raw_input,
+        detected_category=gate.category,
+        proposed_rewrite=gate.proposed_rewrite,
+        user_accepted=False,
+        final_premise=None,
+        exclusion_added=None,
+        triggered_at=gate.triggered_at,
+    )
+
+    try:
+        await store.save_safety_decision(session_id, sd)
+        await store.update_session_status(session_id, SessionStatus.error)
+    except Exception as exc:
+        logger.error(
+            "Failed to persist abandoned safety decision "
+            "(session=%s, error_type=%s)",
+            session_id,
+            type(exc).__name__,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Pipeline routing stub
 # ---------------------------------------------------------------------------
 
 
@@ -83,10 +286,10 @@ async def _route_user_turn(
     ws: WebSocket, turn: VoiceTurn, session_id: str
 ) -> None:
     """
-    Route a final user turn to the appropriate generation pipeline.
+    Route a final, safety-cleared user turn to the generation pipeline.
 
-    T-015 stub: logs the turn and emits a `turn_detected` event.
-    Full pipeline routing (setup vs. steering vs. narration) is wired in T-016+.
+    T-015 stub: emits `turn_detected`. Full setup/steering/narration routing
+    is wired in T-018+.
     """
     turn_id = str(uuid.uuid4())
     logger.info(
@@ -113,17 +316,20 @@ async def _turn_loop(
     session_id: str,
     ws: WebSocket,
     voice_svc: VoiceSessionService,
+    safety_svc: SafetyService,
+    store: SessionStore,
+    safety_gate: _SafetyGate,
 ) -> None:
     """
-    Background task: relay VoiceTurn events to the WebSocket client.
+    Background task: relay VoiceTurn events from the ADK stream to the client.
 
-    For each turn received from VoiceSessionService.stream_turns:
+    For each turn:
       - Emit a `transcript` JSON event (role, text, is_final, phase, turn_id).
-      - If the turn is from the agent and carries audio bytes, send a binary
-        WebSocket frame so the browser can play audio directly.
-      - If the turn is a final user turn, forward it to _route_user_turn.
-
-    The task is cancelled when the WebSocket handler exits its finally block.
+      - Agent turns with audio_bytes → binary WebSocket frame for playback.
+      - Final user turns:
+          * If the safety gate is awaiting ack → complete the ack.
+          * Otherwise: evaluate with SafetyService; if unsafe, begin a safety
+            rewrite; if safe, route normally via _route_user_turn.
     """
     try:
         async for turn in voice_svc.stream_turns(session_id):
@@ -139,13 +345,30 @@ async def _turn_loop(
                 turn_id=turn_id,
             )
 
-            # Agent audio → binary WebSocket frame for client playback.
             if turn.role == "agent" and turn.audio_bytes:
                 await ws.send_bytes(turn.audio_bytes)
 
-            # Final user turn → pipeline routing stub.
             if turn.is_final and turn.role == "user":
-                await _route_user_turn(ws, turn, session_id)
+                if safety_gate.awaiting_ack:
+                    await _complete_safety_ack(ws, session_id, store, safety_gate)
+                else:
+                    result = await safety_svc.evaluate(
+                        turn.transcript, session_id=session_id
+                    )
+                    if not result.safe:
+                        proposed = result.rewrite or SAFE_FALLBACK_REWRITE
+                        await _begin_safety_rewrite(
+                            ws,
+                            turn,
+                            turn_id,
+                            session_id,
+                            voice_svc,
+                            safety_gate,
+                            proposed,
+                            result.category,
+                        )
+                    else:
+                        await _route_user_turn(ws, turn, session_id)
 
     except asyncio.CancelledError:
         logger.debug("_turn_loop cancelled (session=%s)", session_id)
@@ -174,6 +397,7 @@ async def story_websocket(
     token: Optional[str] = Query(default=None),
     store: SessionStore = Depends(get_store),
     voice_svc: VoiceSessionService = Depends(get_voice_service),
+    safety_svc: SafetyService = Depends(get_safety_service),
 ) -> None:
     """
     Bidi-streaming WebSocket for a single story session.
@@ -202,6 +426,9 @@ async def story_websocket(
     # ── Emit connected ────────────────────────────────────────────────────
     await emit(websocket, "connected", session_status=session.status)
 
+    # ── Per-session safety gate ───────────────────────────────────────────
+    safety_gate = _SafetyGate()
+
     # ── Message dispatch loop ─────────────────────────────────────────────
     turn_loop_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
 
@@ -220,7 +447,6 @@ async def story_websocket(
                 )
                 break
 
-            # Starlette may surface disconnect as a message instead of an exception.
             if msg.get("type") == "websocket.disconnect":
                 logger.info(
                     "WS disconnect message (session=%s, code=%s)",
@@ -235,7 +461,6 @@ async def story_websocket(
                 try:
                     await voice_svc.send_audio(session_id, raw_bytes)
                 except VoiceSessionNotFoundError:
-                    # Audio arriving before session_start is silently ignored.
                     pass
                 except VoiceSessionError as exc:
                     logger.error(
@@ -269,15 +494,20 @@ async def story_websocket(
                     )
                     await emit(websocket, "session_error", code="voice_start_failed")
                 else:
-                    # Launch the turn-streaming background task once per session.
                     if turn_loop_task is None or turn_loop_task.done():
                         turn_loop_task = asyncio.create_task(
-                            _turn_loop(session_id, websocket, voice_svc)
+                            _turn_loop(
+                                session_id,
+                                websocket,
+                                voice_svc,
+                                safety_svc,
+                                store,
+                                safety_gate,
+                            )
                         )
                     await emit(websocket, "voice_session_ready")
 
             elif msg_type == "transcript_input":
-                # Text typed/pasted by the user — treated as a complete utterance.
                 text = (
                     str(data.get("text", "")) if isinstance(data, dict) else ""
                 )
@@ -287,13 +517,36 @@ async def story_websocket(
                     audio_bytes=None,
                     is_final=True,
                 )
-                await _route_user_turn(websocket, synthetic_turn, session_id)
+                if safety_gate.awaiting_ack:
+                    await _complete_safety_ack(
+                        websocket, session_id, store, safety_gate
+                    )
+                else:
+                    result = await safety_svc.evaluate(text, session_id=session_id)
+                    if not result.safe:
+                        turn_id = str(uuid.uuid4())
+                        proposed = result.rewrite or SAFE_FALLBACK_REWRITE
+                        await _begin_safety_rewrite(
+                            websocket,
+                            synthetic_turn,
+                            turn_id,
+                            session_id,
+                            voice_svc,
+                            safety_gate,
+                            proposed,
+                            result.category,
+                        )
+                    else:
+                        await _route_user_turn(websocket, synthetic_turn, session_id)
 
             else:
                 await emit(websocket, "session_error", code="unknown_message_type")
 
     finally:
-        # Cancel the background turn-streaming task if still running.
+        # Disconnect with pending safety gate → persist rejection.
+        if safety_gate.awaiting_ack:
+            await _persist_abandoned_safety_decision(session_id, store, safety_gate)
+
         if turn_loop_task is not None and not turn_loop_task.done():
             turn_loop_task.cancel()
             try:
@@ -301,6 +554,5 @@ async def story_websocket(
             except (asyncio.CancelledError, Exception):
                 pass
 
-        # Always close the ADK voice session to release SDK resources.
         await voice_svc.end(session_id)
         logger.info("WS handler cleaned up (session=%s)", session_id)

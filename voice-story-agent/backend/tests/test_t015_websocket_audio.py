@@ -44,9 +44,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.dependencies import get_store, get_voice_service
+from app.dependencies import get_safety_service, get_store, get_voice_service
 from app.exceptions import SessionNotFoundError, VoiceSessionError
 from app.main import app
+from app.models.safety import SafetyResult
 from app.models.session import Session, SessionStatus
 from app.services.adk_voice_service import VoiceTurn
 from app.websocket.story_ws import _SETUP_SYSTEM_PROMPT, _route_user_turn
@@ -103,9 +104,17 @@ def _make_voice_svc(turns=()) -> MagicMock:
     return svc
 
 
+def _mock_safety_svc() -> MagicMock:
+    """Return a SafetyService mock that always returns safe=True."""
+    svc = MagicMock()
+    svc.evaluate = AsyncMock(return_value=SafetyResult(safe=True))
+    return svc
+
+
 def _client(voice_svc: MagicMock, store: MagicMock | None = None) -> TestClient:
     app.dependency_overrides[get_store] = lambda: (store or _mock_store())
     app.dependency_overrides[get_voice_service] = lambda: voice_svc
+    app.dependency_overrides[get_safety_service] = lambda: _mock_safety_svc()
     return TestClient(app, raise_server_exceptions=False)
 
 

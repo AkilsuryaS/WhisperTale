@@ -26,9 +26,10 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from app.dependencies import get_store, get_voice_service
+from app.dependencies import get_safety_service, get_store, get_voice_service
 from app.exceptions import SessionNotFoundError
 from app.main import app
+from app.models.safety import SafetyResult
 from app.models.session import Session, SessionStatus
 from app.websocket.story_ws import _is_valid_token, emit
 
@@ -79,11 +80,19 @@ def _mock_voice_svc() -> MagicMock:
     return svc
 
 
+def _mock_safety_svc(safe: bool = True) -> MagicMock:
+    """Return a SafetyService mock that always evaluates to safe=True by default."""
+    svc = MagicMock()
+    svc.evaluate = AsyncMock(return_value=SafetyResult(safe=safe))
+    return svc
+
+
 def _client(store: MagicMock, voice_svc: MagicMock | None = None) -> TestClient:
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_voice_service] = lambda: (
         voice_svc if voice_svc is not None else _mock_voice_svc()
     )
+    app.dependency_overrides[get_safety_service] = lambda: _mock_safety_svc()
     return TestClient(app, raise_server_exceptions=False)
 
 

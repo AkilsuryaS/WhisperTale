@@ -72,7 +72,8 @@ class SafetyDecision(BaseModel):
     phase: SafetyPhase
     # Verbatim unsafe utterance — audit only, never surfaced in UI
     raw_input: str
-    detected_category: SafetyCategory
+    # None when the classifier itself failed (fail-safe path)
+    detected_category: Optional[SafetyCategory] = None
     # Child-safe alternative voiced to the user
     proposed_rewrite: str
     # True if the user acknowledged / redirected; False if session was abandoned
