@@ -1634,9 +1634,12 @@ Props: `page: PageState`, `pageNumber`, `totalPages`.
 ### T-040 · HoldAnimation + StoryBook components
 
 **Priority**: P1
+**Status**: ✅ Done — `voice-story-agent/frontend/src/components/HoldAnimation.tsx` implemented as a `"use client"` React component. Props: `isGenerating: boolean`, `className?: string`. Returns `null` when `isGenerating=false` (never blank during generation); when `true`, renders a `data-testid="hold-animation"` container with `role="status"` and `aria-label="Generating your story page…"`, three staggered bouncing dots (`data-testid="hold-animation-dot-{0|1|2}"`) each with `animate-bounce` + `rounded-full` classes and `animationDelay` of 0 ms, 150 ms, 300 ms respectively, plus a "Creating your story…" caption. `voice-story-agent/frontend/src/components/StoryBook.tsx` implemented as a `"use client"` React component. Props: `pages: Map<number, PageState>`, `isGenerating: boolean`, `storyComplete: boolean`, `steeringWindowOpen: boolean`, `totalPages?: number` (default 5). Layout: relative container with an optional `SteeringBadge` (`data-testid="steering-badge"`, `role="status"`, amber bg, `aria-label="You can speak to change the story"`) in the top-right when `steeringWindowOpen=true`; a `data-testid="story-book-carousel"` horizontal scroll-snap div containing: one `data-testid="story-book-slide-{N}"` slide per `Map` entry (sorted ascending) wrapping a `<StoryPage>`; a `data-testid="story-book-hold-slide"` wrapping `<HoldAnimation isGenerating>` when `isGenerating=true`; a `data-testid="story-book-closing-slide"` wrapping `<ClosingCard>` (`data-testid="story-closing-card"`, "The End! What a great adventure.") when `storyComplete=true`. No `any` in public API; `tsc --noEmit` exits 0. 15 Jest tests in `src/components/__tests__/HoldAnimation.test.tsx` covering: renders when isGenerating=true, returns null when false, appears/disappears on prop change, role="status" + aria-label, dots container, exactly 3 dots, each has animate-bounce + rounded-full, staggered animationDelay. 23 Jest tests in `src/components/__tests__/StoryBook.test.tsx` covering: all done-when criteria (hold animation visible/invisible, 0/1/3/5 StoryPage renders, closing card present/absent/"The End!"/adventure text, steering badge present/absent/transitions/aria), plus simultaneous state, totalPages default/forwarding, slide containers. 200 total passing. `tsc --noEmit` exits 0.
 **Files**:
-- `voice-story-agent/frontend/src/components/HoldAnimation.tsx`
-- `voice-story-agent/frontend/src/components/StoryBook.tsx`
+- `voice-story-agent/frontend/src/components/HoldAnimation.tsx` (new)
+- `voice-story-agent/frontend/src/components/StoryBook.tsx` (new)
+- `voice-story-agent/frontend/src/components/__tests__/HoldAnimation.test.tsx` (new)
+- `voice-story-agent/frontend/src/components/__tests__/StoryBook.test.tsx` (new)
 
 **Description**:
 `HoldAnimation`:
