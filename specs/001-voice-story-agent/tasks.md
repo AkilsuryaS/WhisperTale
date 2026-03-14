@@ -425,6 +425,7 @@ to ensure consistent `{"type": "..."}` framing.
 ### T-013 · VoiceSessionService — ADK bidi-stream open/close/audio
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/adk_voice_service.py` implemented with `start`, `send_audio`, `end` lifecycle. Mock-based client injection for testability. `VoiceSessionNotFoundError` + `VoiceSessionError` in `app/exceptions.py`. No ADK private-class references. 26 mock-based tests (365 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/adk_voice_service.py`
 
@@ -460,6 +461,7 @@ Raise `VoiceSessionError` on ADK API failures.
 ### T-014 · VoiceSessionService — stream_turns + speak
 
 **Priority**: P1
+**Status**: ✅ Done — `stream_turns` and `speak` added to `VoiceSessionService`. `VoiceTurn` dataclass (`role`, `transcript`, `audio_bytes`, `is_final`) defined in same module. `stream_turns` normalises all ADK event shapes (input_transcription + model_turn) into `VoiceTurn`; handles both `finished` and `is_final` field names across SDK versions. `speak` sends via `send_client_content` and awaits `turn_complete` with a configurable 10 s timeout raising `VoiceSessionError`. 26 mock-based tests (391 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/adk_voice_service.py` (extend)
 
