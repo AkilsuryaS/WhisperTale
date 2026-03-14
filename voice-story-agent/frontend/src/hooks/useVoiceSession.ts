@@ -44,6 +44,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import type React from "react";
 import { WsClient } from "@/lib/wsClient";
 import type { SessionStatus } from "@/lib/wsTypes";
 import type { HydrateSession } from "./useStoryState";
@@ -185,6 +186,15 @@ export function useVoiceSession(
       recorderRef.current = null;
     }
     if (streamRef.current) {
+      // Disconnect Web Audio nodes if present
+      const s = streamRef.current as MediaStream & {
+        _audioContext?: AudioContext;
+        _processor?: ScriptProcessorNode;
+        _source?: MediaStreamAudioSourceNode;
+      };
+      try { s._source?.disconnect(); } catch { /* ignore */ }
+      try { s._processor?.disconnect(); } catch { /* ignore */ }
+      try { s._audioContext?.close(); } catch { /* ignore */ }
       streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
@@ -362,31 +372,34 @@ export function useVoiceSession(
 
     streamRef.current = stream;
 
-    const RecorderCtor =
-      _MediaRecorder ??
-      (typeof MediaRecorder !== "undefined" ? MediaRecorder : undefined);
+    // Use Web Audio API to capture raw PCM (16-bit, 16 kHz, mono)
+    // MediaRecorder with audio/webm produces compressed Opus which Gemini Live cannot use.
+    const audioContext = new AudioContext({ sampleRate: 16000 });
+    const source = audioContext.createMediaStreamSource(stream);
+    const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-    if (!RecorderCtor) {
-      setError({ code: "no_media_recorder", message: "MediaRecorder not available" });
-      return;
-    }
-
-    const recorder = new RecorderCtor(stream, { mimeType: "audio/webm" });
-    recorderRef.current = recorder;
-
-    recorder.addEventListener("dataavailable", (evt) => {
-      if (stoppedRef.current) return;
-      const e = evt as BlobEvent;
-      if (e.data.size > 0) {
-        e.data.arrayBuffer().then((buf) => {
-          if (!stoppedRef.current && wsClientRef.current?.isConnected) {
-            wsClientRef.current.sendAudio(buf);
-          }
-        }).catch(() => { /* ignore */ });
+    processor.onaudioprocess = (evt) => {
+      if (stoppedRef.current || !wsClientRef.current?.isConnected) return;
+      const float32 = evt.inputBuffer.getChannelData(0);
+      // Convert float32 [-1,1] to int16
+      const int16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
       }
+      wsClientRef.current.sendAudio(int16.buffer);
+    };
+
+    source.connect(processor);
+    processor.connect(audioContext.destination);
+
+    // Store cleanup refs
+    (streamRef as React.MutableRefObject<MediaStream & { _audioContext?: AudioContext; _processor?: ScriptProcessorNode; _source?: MediaStreamAudioSourceNode } | null>).current = Object.assign(stream, {
+      _audioContext: audioContext,
+      _processor: processor,
+      _source: source,
     });
 
-    recorder.start(100); // emit chunks every 100 ms
     setIsListening(true);
   }, [resolveFetch, _mediaDevices, _wsClientFactory, _MediaRecorder, stopStreaming, _doReconnectHydrate]);
 
