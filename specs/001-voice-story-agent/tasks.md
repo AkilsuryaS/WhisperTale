@@ -1770,11 +1770,6 @@ Configure Firebase App Hosting for Next.js (primary target — handles SSR nativ
 - `voice-story-agent/backend/app/websocket/page_orchestrator.py` (modified)
 - `voice-story-agent/backend/app/websocket/story_ws.py` (modified)
 - `voice-story-agent/backend/tests/test_t044_cloud_logging.py` (new)
-**Files**:
-- `voice-story-agent/backend/app/logging_config.py`
-- `voice-story-agent/backend/app/websocket/story_ws.py` (instrument)
-- `voice-story-agent/backend/app/services/safety_service.py` (instrument)
-- `voice-story-agent/backend/app/websocket/page_orchestrator.py` (instrument)
 
 **Description**:
 Configure Python `logging` with a JSON formatter compatible with Cloud Logging structured logs:
@@ -1799,6 +1794,9 @@ Key instrumentation points:
 ---
 
 ### T-045 · WebSocket reconnect recovery *(stretch)*
+
+**Priority**: P2
+**Status**: ✅ Done — `voice-story-agent/frontend/src/hooks/useVoiceSession.ts` extended: added `onReconnectHydrate?: (session: HydrateSession) => void` option (called with REST snapshot after reconnect); added `isReconnecting: boolean` and `reconnectAttempt: number` to `UseVoiceSessionReturn`; WsClient now created with `reconnectBaseMs: 1000` (→ 1 s, 2 s, 4 s, 8 s, 16 s backoff) and `maxRetries: 5`; `hasConnectedOnceRef` + `isReconnectingRef` track whether a `connected` event is a reconnect; second+ `connected` event sets `isReconnecting=true`, `reconnectAttempt=client.retryCount`; `voice_session_ready` on a reconnect triggers `_doReconnectHydrate()` — fetches `GET /sessions/{id}` and calls `onReconnectHydrate(session)`, then resets `isReconnecting` and `reconnectAttempt`; hydration fetch failure is non-fatal (session continues, no error set); `stopSession()` resets `isReconnecting`/`reconnectAttempt`/`sessionIdRef`/`isReconnectingRef`. `voice-story-agent/frontend/src/lib/wsClient.ts` extended: added `onMaxRetriesExhausted?: () => void` option to `WsClientOptions`; `_handleClose` fires this callback after the last retry is exhausted; `useVoiceSession` wires it to set `error.code="reconnect_failed"` with message citing 5 attempts. `useStoryState.ts` unchanged — `hydrate()` already accepts `HydrateSession` and restores all page states. 23 Jest tests in `src/hooks/__tests__/useVoiceSessionReconnect.test.tsx` covering: initial state (isReconnecting=false, reconnectAttempt=0), WsClient configured with reconnectBaseMs=1000, maxRetries=5, onMaxRetriesExhausted wired; second connected → isReconnecting=true; reconnectAttempt reflects retryCount; GET /sessions/{id} called after voice_session_ready on reconnect; onReconnectHydrate called with correct session data including pages; isReconnecting/reconnectAttempt reset after hydration; voice_session_ready without reconnect does NOT call hydrate; hydration fetch failure non-fatal; reconnect_failed error after max retries; error message mentions 5; isReconnecting=false after max retries; stopSession resets both fields; onMaxRetriesExhausted fires error setter; WsClient onMaxRetriesExhausted unit test (fires after 2 retries exhausted); intentional disconnect does not fire callback. 241 total passing (23 new + 218 previous). `tsc --noEmit` exited clean. `npm run build` succeeded.
 
 **Priority**: P2
 **Files**:

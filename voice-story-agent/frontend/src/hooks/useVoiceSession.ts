@@ -15,7 +15,19 @@
  *    - story_complete → set sessionStatus = "complete"
  *    - connected      → update sessionStatus from payload
  *
- * 3. `stopSession()`:
+ * 3. Reconnect recovery (T-045):
+ *    - WsClient detects disconnect and retries with exponential backoff
+ *      (1 s, 2 s, 4 s, 8 s, 16 s — base 1000 ms, ×2, max 5 attempts).
+ *    - When WsClient re-connects it auto-sends `session_start`.
+ *    - After the server responds with `voice_session_ready`, the hook calls
+ *      `GET /sessions/{id}` and invokes `opts.onReconnectHydrate(session)` so
+ *      the caller can re-fill story state from the REST snapshot.
+ *    - After 5 failed reconnect attempts the hook sets
+ *      `error = { code: "reconnect_failed", … }` and stops retrying.
+ *    - `isReconnecting` is true while a reconnect cycle is in-flight.
+ *    - `reconnectAttempt` (0-based) reflects the current attempt count.
+ *
+ * 4. `stopSession()`:
  *    - Stop MediaRecorder + tracks
  *    - wsClient.disconnect()
  *    - Clear all state
@@ -34,6 +46,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { WsClient } from "@/lib/wsClient";
 import type { SessionStatus } from "@/lib/wsTypes";
+import type { HydrateSession } from "./useStoryState";
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -63,6 +76,12 @@ export interface UseVoiceSessionOptions {
    * Injectable MediaRecorder constructor for unit tests.
    */
   _MediaRecorder?: new (stream: MediaStream, opts?: MediaRecorderOptions) => MediaRecorder;
+  /**
+   * Called after a successful WebSocket reconnect + `voice_session_ready`,
+   * with the hydration data fetched from `GET /sessions/{id}`.
+   * Use this to call `story.hydrate(session)` in the page component.
+   */
+  onReconnectHydrate?: (session: HydrateSession) => void;
 }
 
 export interface UseVoiceSessionReturn {
@@ -74,6 +93,10 @@ export interface UseVoiceSessionReturn {
   isListening: boolean;
   /** Non-null when an unrecoverable error has been received. */
   error: VoiceSessionError | null;
+  /** True while a WebSocket reconnect attempt is in-flight. */
+  isReconnecting: boolean;
+  /** Number of reconnect attempts made (0 = no reconnect attempted). */
+  reconnectAttempt: number;
   /** Start the session: creates session, reserves ADK slot, connects WS, starts mic. */
   startSession: () => Promise<void>;
   /** Stop streaming and disconnect cleanly. */
@@ -94,6 +117,10 @@ const WS_BASE =
     ? (process.env.NEXT_PUBLIC_WS_BASE_URL ?? "ws://localhost:8000")
     : "ws://localhost:8000";
 
+/** T-045: 1 s base → 1 s, 2 s, 4 s, 8 s, 16 s (5 attempts). */
+const RECONNECT_BASE_MS = 1000;
+const MAX_RETRIES = 5;
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -110,6 +137,7 @@ export function useVoiceSession(
       : undefined) as
       | (new (stream: MediaStream, opts?: MediaRecorderOptions) => MediaRecorder)
       | undefined,
+    onReconnectHydrate,
   } = opts;
 
   // Lazily resolved so jsdom environments (which lack global fetch) don't fail
@@ -123,11 +151,24 @@ export function useVoiceSession(
   const [sessionStatus, setSessionStatus] = useState<SessionStatus | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<VoiceSessionError | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
 
   const wsClientRef = useRef<WsClient | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const stoppedRef = useRef(false);
+
+  // Track whether the first `connected` event has fired so subsequent ones
+  // are identified as reconnects.
+  const hasConnectedOnceRef = useRef(false);
+  // Stable ref for session ID (avoids capturing stale closure).
+  const sessionIdRef = useRef<string | null>(null);
+  // Stable ref for isReconnecting (avoids stale closure in WsClient callbacks).
+  const isReconnectingRef = useRef(false);
+  // Stable ref for the hydrate callback.
+  const onReconnectHydrateRef = useRef(onReconnectHydrate);
+  useEffect(() => { onReconnectHydrateRef.current = onReconnectHydrate; }, [onReconnectHydrate]);
 
   // ---------------------------------------------------------------------------
   // Internal helpers
@@ -154,12 +195,43 @@ export function useVoiceSession(
   }, [stopStreaming]);
 
   // ---------------------------------------------------------------------------
+  // Reconnect hydration — called after voice_session_ready on a reconnect
+  // ---------------------------------------------------------------------------
+
+  const _doReconnectHydrate = useCallback(async () => {
+    const sid = sessionIdRef.current;
+    if (!sid) return;
+
+    const activeFetch = resolveFetch();
+    if (!activeFetch) return;
+
+    try {
+      const res = await activeFetch(`${API_BASE}/sessions/${sid}`);
+      if (!res.ok) {
+        throw new Error(`GET /sessions/${sid} failed: ${res.status}`);
+      }
+      const session = (await res.json()) as HydrateSession;
+      onReconnectHydrateRef.current?.(session);
+    } catch {
+      // Non-fatal: hydration failed — UI will show stale state but session
+      // continues; new page events will update state going forward.
+    }
+
+    setIsReconnecting(false);
+    isReconnectingRef.current = false;
+    setReconnectAttempt(0);
+  }, [resolveFetch]);
+
+  // ---------------------------------------------------------------------------
   // startSession
   // ---------------------------------------------------------------------------
 
   const startSession = useCallback(async () => {
     stoppedRef.current = false;
+    hasConnectedOnceRef.current = false;
     setError(null);
+    setIsReconnecting(false);
+    setReconnectAttempt(0);
 
     const activeFetch = resolveFetch();
     if (!activeFetch) {
@@ -181,6 +253,7 @@ export function useVoiceSession(
       return;
     }
     setSessionId(newSessionId);
+    sessionIdRef.current = newSessionId;
     setSessionStatus("setup");
 
     // ── Step 2: Reserve ADK slot ─────────────────────────────────────────────
@@ -204,6 +277,17 @@ export function useVoiceSession(
       wsBaseUrl: WS_BASE,
       sessionId: newSessionId,
       token: "",
+      reconnectBaseMs: RECONNECT_BASE_MS,
+      maxRetries: MAX_RETRIES,
+      onMaxRetriesExhausted: () => {
+        setError({
+          code: "reconnect_failed",
+          message: `WebSocket reconnect failed after ${MAX_RETRIES} attempts`,
+        });
+        isReconnectingRef.current = false;
+        setIsReconnecting(false);
+        stopStreaming();
+      },
     };
     const client = _wsClientFactory
       ? _wsClientFactory(wsOpts)
@@ -211,10 +295,25 @@ export function useVoiceSession(
 
     client
       .on("connected", (evt) => {
+        if (hasConnectedOnceRef.current) {
+          // This is a reconnect — update state and wait for voice_session_ready
+          // to trigger hydration.
+          isReconnectingRef.current = true;
+          setIsReconnecting(true);
+          setReconnectAttempt(client.retryCount);
+        } else {
+          hasConnectedOnceRef.current = true;
+        }
         setSessionStatus(evt.session_status);
       })
+      .on("voice_session_ready", () => {
+        if (hasConnectedOnceRef.current && isReconnectingRef.current) {
+          // After re-connection is confirmed ready, hydrate from REST snapshot.
+          void _doReconnectHydrate();
+        }
+      })
       .on("session_error", (evt) => {
-        setError({ code: evt.code, message: evt.message });
+        setError({ code: evt.code, message: evt.message ?? "" });
         stopStreaming();
       })
       .on("story_complete", () => {
@@ -283,7 +382,7 @@ export function useVoiceSession(
 
     recorder.start(100); // emit chunks every 100 ms
     setIsListening(true);
-  }, [resolveFetch, _mediaDevices, _wsClientFactory, _MediaRecorder, stopStreaming]);
+  }, [resolveFetch, _mediaDevices, _wsClientFactory, _MediaRecorder, stopStreaming, _doReconnectHydrate]);
 
   // ---------------------------------------------------------------------------
   // stopSession
@@ -291,10 +390,15 @@ export function useVoiceSession(
 
   const stopSession = useCallback(() => {
     stoppedRef.current = true;
+    hasConnectedOnceRef.current = false;
+    sessionIdRef.current = null;
+    isReconnectingRef.current = false;
     disconnect();
     setSessionId(null);
     setSessionStatus(null);
     setError(null);
+    setIsReconnecting(false);
+    setReconnectAttempt(0);
   }, [disconnect]);
 
   // ---------------------------------------------------------------------------
@@ -313,6 +417,8 @@ export function useVoiceSession(
     sessionStatus,
     isListening,
     error,
+    isReconnecting,
+    reconnectAttempt,
     startSession,
     stopSession,
   };
