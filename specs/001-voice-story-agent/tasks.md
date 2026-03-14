@@ -1491,8 +1491,12 @@ Implement a typed WebSocket client class:
 ### T-035 · useVoiceSession hook
 
 **Priority**: P1
+**Status**: ✅ Done — `voice-story-agent/frontend/src/hooks/useVoiceSession.ts` implemented as a `"use client"` React hook with full voice session lifecycle: (1) `startSession()` calls `POST /sessions` to obtain `session_id`, then `POST /sessions/{id}/voice-session` to reserve the ADK bidi-stream slot, then creates and connects a `WsClient` (injectable via `_wsClientFactory` option) which auto-sends `session_start`; (2) requests `getUserMedia({ audio: true })` and starts a `MediaRecorder` emitting 100 ms PCM chunks forwarded to `wsClient.sendAudio(buf)` as binary frames; (3) subscribes to `connected` (updates `sessionStatus`), `session_error` (sets `error` state and stops streaming), `story_complete` (sets `sessionStatus = "complete"` and stops streaming). All browser globals (`fetch`, `navigator.mediaDevices`, `MediaRecorder`) are injected via `UseVoiceSessionOptions` so tests run without real APIs. `stopSession()` stops `MediaRecorder`, stops all media tracks, and calls `wsClient.disconnect()`, then clears all state. `useEffect` cleanup ensures `disconnect()` on unmount. No `any` in public API; `tsc --noEmit` exits 0. `@testing-library/react` and `@testing-library/jest-dom` installed. `jest.config.ts` updated to match `*.test.tsx`. 18 Jest tests in `src/hooks/__tests__/useVoiceSession.test.tsx` covering all done-when criteria: `startSession()` calls `POST /sessions` with correct URL, sets `sessionId`, calls `POST /sessions/{id}/voice-session`, calls `wsClient.connect()`; calls `getUserMedia({ audio: true })`, starts `MediaRecorder`, `isListening=true`; `session_error` sets error state and stops listening; `story_complete` → `sessionStatus="complete"`; `connected` event updates `sessionStatus`; `stopSession()` sets `isListening=false`, clears `sessionId`/`sessionStatus`, calls `disconnect()`; `POST /sessions` failure → `session_create_failed`; `POST /voice-session` failure → `voice_session_failed`; mic denied → `mic_permission_denied`; initial state all null/false. 45 total passing (27 from T-034 + 18 new). `tsc --noEmit` exits 0.
 **Files**:
-- `voice-story-agent/frontend/src/hooks/useVoiceSession.ts`
+- `voice-story-agent/frontend/src/hooks/useVoiceSession.ts` (new)
+- `voice-story-agent/frontend/src/hooks/__tests__/useVoiceSession.test.tsx` (new)
+- `voice-story-agent/frontend/jest.config.ts` (extend — add .tsx to testMatch)
+- `voice-story-agent/frontend/package.json` (extend — @testing-library/react, @testing-library/jest-dom)
 
 **Description**:
 React hook that manages the full voice session lifecycle:
