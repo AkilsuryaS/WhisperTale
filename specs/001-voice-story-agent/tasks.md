@@ -1138,8 +1138,10 @@ Unit tests for `StoryPlannerService.expand_page` word count and content policy e
 ### T-027 · CharacterBibleService — build_image_prompt
 
 **Priority**: P1
+**Status**: ✅ Done — `build_image_prompt` in `app/services/character_bible_service.py` updated to fully implement the T-027 spec. Pure function (no I/O). `text_prompt` includes art style, color palette, mood, protagonist name/species/color/attire/notable_traits, page scene as action description, and all `ContentPolicy.exclusions` + `negative_style_terms` (each prefixed with `"no "`) as a negative clause. `reference_urls` is always empty for page 1; for pages 2–5 includes `protagonist.reference_image_gcs_uri` (if set); for any `CharacterRef` in `bible.character_refs` whose `name` appears in `page_scene`, that character's `reference_image_gcs_uri` is appended (if set). No `None` values are ever inserted. 11 pure unit tests in `test_t027_build_image_prompt.py` covering: page-1 no-refs, page-2 protagonist ref present/None, secondary character in/not-in scene, secondary character with None URI, negative style terms in prompt, notable traits in prompt, and protagonist+secondary both included. 684 total passing (30 integration tests deselected). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/character_bible_service.py` (extend)
+- `voice-story-agent/backend/tests/test_t027_build_image_prompt.py`
 
 **Description**:
 Implement (pure function, no I/O):

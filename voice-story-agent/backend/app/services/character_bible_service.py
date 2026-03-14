@@ -315,20 +315,28 @@ class CharacterBibleService:
         return bible
 
     def build_image_prompt(
-        self, bible: CharacterBible, page_text: str, page_number: int
+        self, bible: CharacterBible, page_scene: str, page_number: int
     ) -> ImagePrompt:
         """
-        Build an ImagePrompt for Imagen from the CharacterBible and page text.
+        Build an ImagePrompt for Imagen from the CharacterBible and page scene.
 
-        Incorporates:
-        - Protagonist visual description (species, color, attire, notable_traits)
-        - Style bible art style, color palette, and mood
-        - Content policy exclusions as negative constraints
-        - Reference image URI from protagonist (if available, i.e. page > 1)
+        Pure function — performs no I/O.
+
+        Rules:
+        - text_prompt always includes: art style, color palette, mood,
+          negative style terms, protagonist name/species/color/notable
+          traits/attire, and the page_scene as the action description.
+        - negative_style_terms are prefixed with "no " and joined as a
+          negative clause.
+        - reference_urls is empty for page 1; for pages 2–5 includes
+          protagonist.reference_image_gcs_uri (if set).
+        - For any CharacterRef whose name appears in page_scene, that
+          character's reference_image_gcs_uri (if set) is appended to
+          reference_urls.
 
         Args:
             bible:       The session's CharacterBible.
-            page_text:   The display text for the page (60–120 words).
+            page_scene:  The display text or action description for the page.
             page_number: The current page number (1–5).
 
         Returns:
@@ -346,26 +354,44 @@ class CharacterBibleService:
             + (f" with {traits_clause}" if traits_clause else "")
         )
 
+        # Negative style terms prefixed with "no "
+        neg_style = (
+            ", ".join(
+                t if t.startswith("no ") else f"no {t}"
+                for t in sb.negative_style_terms
+            )
+            if sb.negative_style_terms
+            else ""
+        )
+
         # Negative constraints from content policy
         negatives = (
             ", ".join(bible.content_policy.exclusions)
             if bible.content_policy.exclusions
             else "no inappropriate content"
         )
+        if neg_style:
+            negatives = f"{negatives}, {neg_style}"
 
         text_prompt = (
             f"{sb.art_style} illustration for a children's bedtime story. "
-            f"Scene: {page_text.strip()} "
+            f"Scene: {page_scene.strip()} "
             f"Main character: {protagonist_desc}. "
             f"Art style: {sb.art_style}, color palette: {sb.color_palette}, "
             f"mood: {sb.mood}. "
-            f"Avoid: {negatives}, {', '.join(sb.negative_style_terms)}."
+            f"Avoid: {negatives}."
         )
 
-        # Include reference image for consistency on pages 2+
+        # Build reference_urls — empty for page 1
         reference_urls: list[str] = []
-        if page_number > 1 and p.reference_image_gcs_uri:
-            reference_urls = [p.reference_image_gcs_uri]
+        if page_number > 1:
+            if p.reference_image_gcs_uri:
+                reference_urls.append(p.reference_image_gcs_uri)
+
+            # Append secondary character references when they appear in the scene
+            for char_ref in bible.character_refs:
+                if char_ref.name in page_scene and char_ref.reference_image_gcs_uri:
+                    reference_urls.append(char_ref.reference_image_gcs_uri)
 
         return ImagePrompt(text_prompt=text_prompt, reference_urls=reference_urls)
 
