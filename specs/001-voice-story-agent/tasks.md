@@ -1461,8 +1461,13 @@ Verify clean-state on new session: `GET /sessions/{old_id}` characters and arc d
 ### T-034 · wsClient.ts — typed WebSocket client
 
 **Priority**: P1
+**Status**: ✅ Done — `voice-story-agent/frontend/src/lib/wsTypes.ts` created with the complete TypeScript discriminated-union type system matching `contracts/api-spec.yaml` `x-websocket-events`: all client→server message interfaces (`SessionStartMessage`, `TranscriptInputMessage`, `InterruptMessage`, `VoiceFeedbackMessage`, `PingMessage`) united as `WsClientMessage`; all server→client event interfaces (`ConnectedEvent`, `TranscriptEvent`, `PageCompleteEvent`, `SteeringWindowOpenEvent`, `VoiceCommandAppliedEvent`, etc.) united as `WsServerEvent`; `WsServerEventByType<T>` utility for type-safe handler narrowing; shared enums (`SessionStatus`, `CommandType`, `AssetType`, `TurnPhase`, `SafetyCategory`). `voice-story-agent/frontend/src/lib/wsClient.ts` implemented: `WsClient` class with `WsClientOptions` (injectable `_factory` for test isolation), `connect()` / `disconnect()` / `send(msg: WsClientMessage)` / `sendAudio(pcm: ArrayBuffer)` / `on<T>(type, handler)` / `isConnected` / `retryCount`; binary frames forwarded to `onAudioChunk` callback; text frames parsed and dispatched by `type` to registered handlers; auto-reconnect on unintended close: exponential back-off (`base × 2^retryCount` ms), max `maxRetries` (default 5), re-emits `session_start` on each reconnect open; `disconnect()` sets `_intentionalClose` flag preventing any subsequent auto-reconnect. No `any` in public API — internal handler map cast through `unknown`. `jest.config.ts` created; `@types/jest`, `ts-jest`, `jest-environment-jsdom` installed. 27 Jest tests in `src/lib/__tests__/wsClient.test.ts` covering: correct URL construction, `binaryType=arraybuffer`, `isConnected` state, `session_start` on open, `send()` JSON serialisation, `send()` / `sendAudio()` dropped when not OPEN, `sendAudio()` sends binary frame, `on("transcript")` handler receives event, `on("connected")` / `on("page_complete")` handlers, multiple independent handlers, unknown/malformed frames silently dropped, binary inbound forwarded to `onAudioChunk`, disconnect prevents reconnect, reconnect after base delay, exponential back-off, `retryCount` increments / resets, `session_start` re-sent on reconnect, `maxRetries` limit respected. `tsc --noEmit` exits 0.
 **Files**:
-- `voice-story-agent/frontend/src/lib/wsClient.ts`
+- `voice-story-agent/frontend/src/lib/wsTypes.ts` (new)
+- `voice-story-agent/frontend/src/lib/wsClient.ts` (new)
+- `voice-story-agent/frontend/src/lib/__tests__/wsClient.test.ts` (new)
+- `voice-story-agent/frontend/jest.config.ts` (new)
+- `voice-story-agent/frontend/package.json` (extend — jest, ts-jest, @types/jest, jest-environment-jsdom)
 
 **Description**:
 Implement a typed WebSocket client class:
