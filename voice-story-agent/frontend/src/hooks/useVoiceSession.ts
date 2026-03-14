@@ -199,6 +199,10 @@ export function useVoiceSession(
   const speechRecognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const transcriptBufferRef = useRef("");
   const stoppedRef = useRef(false);
+  // AudioContext for playing back 24 kHz PCM audio received from the Gemini
+  // Live agent (binary WebSocket frames).  Created lazily on first startSession()
+  // call (requires a user gesture) and closed on stopSession().
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // Track whether the first `connected` event has fired so subsequent ones
   // are identified as reconnects.
@@ -434,12 +438,34 @@ export function useVoiceSession(
     if (stoppedRef.current) return;
 
     // ── Step 3: Connect WebSocket ────────────────────────────────────────────
+    // Create an AudioContext for playing back 24 kHz PCM from the Gemini Live
+    // agent (must happen after a user gesture, which the tap already was).
+    if (!audioContextRef.current && typeof AudioContext !== "undefined") {
+      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+    }
+
     const wsOpts = {
       wsBaseUrl: WS_BASE,
       sessionId: newSessionId,
       token: newSessionId,
       reconnectBaseMs: RECONNECT_BASE_MS,
       maxRetries: MAX_RETRIES,
+      onAudioChunk: (pcm: ArrayBuffer) => {
+        const ctx = audioContextRef.current;
+        if (!ctx) return;
+        // Gemini Live emits 16-bit signed little-endian PCM at 24 kHz mono.
+        const int16 = new Int16Array(pcm);
+        const float32 = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) {
+          float32[i] = int16[i] / 0x8000;
+        }
+        const buffer = ctx.createBuffer(1, float32.length, 24000);
+        buffer.copyToChannel(float32, 0);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start();
+      },
       onMaxRetriesExhausted: () => {
         setError({
           code: "reconnect_failed",
@@ -533,6 +559,11 @@ export function useVoiceSession(
     setIsReady(false);
     setWsClientState(null);
     setLiveTranscript("");
+    // Close the playback AudioContext
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
   }, [disconnect]);
 
   // ---------------------------------------------------------------------------

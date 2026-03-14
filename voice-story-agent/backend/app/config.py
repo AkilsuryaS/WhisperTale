@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     GEMINI_FLASH_MODEL: str = "gemini-2.5-flash"
 
     # ── Imagen ────────────────────────────────────────────────────────────
-    IMAGEN_MODEL: str = "imagen-3.0-generate-001"
+    IMAGEN_MODEL: str = "imagen-3.0-generate-002"
 
     # ── Gemini Live (bidi-streaming voice) ────────────────────────────────
     GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-001"

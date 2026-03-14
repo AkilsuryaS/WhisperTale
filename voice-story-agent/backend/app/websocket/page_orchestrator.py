@@ -85,7 +85,7 @@ async def _generate_image_asset(
         await emit(
             "page_image_ready",
             page=page_number,
-            signed_url=signed_url,
+            image_url=signed_url,
             gcs_uri=gcs_uri,
         )
         logger.info(
@@ -148,7 +148,7 @@ async def _generate_audio_asset(
         await emit(
             "page_audio_ready",
             page=page_number,
-            signed_url=signed_url,
+            audio_url=signed_url,
             gcs_uri=gcs_uri,
         )
         logger.info(

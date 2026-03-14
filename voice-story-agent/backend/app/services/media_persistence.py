@@ -9,6 +9,11 @@ GCS key patterns:
 All store methods return a  gs://{bucket}/{key}  URI.
 Signed URLs use v4 signatures and default to 1-hour expiry.
 
+On Cloud Run the default credentials are Compute Engine credentials that lack
+a private key for signing.  get_signed_url() detects this and falls back to
+the IAM signBlob API (google.auth.iam.Signer + google.auth.credentials
+.with_scopes()) so no service account key file is required in production.
+
 The google-cloud-storage client is synchronous; every GCS call is wrapped
 in asyncio.to_thread() so the service is safe to await inside an async app.
 
@@ -22,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import logging
 from typing import TYPE_CHECKING
 
 from google.api_core.exceptions import GoogleAPICallError
@@ -33,10 +39,64 @@ from app.exceptions import MediaPersistenceError
 if TYPE_CHECKING:
     from google.cloud.storage import Bucket, Client
 
+logger = logging.getLogger(__name__)
+
 
 def _gcs_client() -> "Client":
     """Return a GCS client using the project from settings."""
     return storage.Client(project=settings.require_gcp("MediaPersistenceService"))
+
+
+def _make_iam_signed_url(bucket_name: str, key: str, expiration: datetime.timedelta) -> str:
+    """
+    Generate a v4 signed URL using the IAM signBlob API.
+
+    This works on Cloud Run / GCE where the default credentials are
+    Compute Engine credentials that have no private key.  The IAM API
+    is called with the service account's email (resolved from the
+    Application Default Credentials) to sign the bytes instead.
+    """
+    import google.auth
+    import google.auth.transport.requests
+    from google.auth import impersonated_credentials  # noqa: F401 — ensure import works
+
+    # Resolve ADC credentials and the service account email
+    credentials, project = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+
+    # Refresh so we have a valid token before signing
+    request = google.auth.transport.requests.Request()
+    credentials.refresh(request)
+
+    # On Compute Engine / Cloud Run, service_account_email is available on the creds
+    service_account_email = getattr(credentials, "service_account_email", None)
+    if not service_account_email:
+        # Try universe_domain fallback — some credential types store it differently
+        service_account_email = getattr(credentials, "_service_account_email", None)
+    if not service_account_email:
+        raise MediaPersistenceError(
+            "Cannot determine service account email for IAM URL signing. "
+            "Ensure the Cloud Run service account has the "
+            "'roles/iam.serviceAccountTokenCreator' role."
+        )
+
+    # Build a GCS client using these IAM-refreshable credentials
+    client = storage.Client(
+        project=project or settings.require_gcp("MediaPersistenceService"),
+        credentials=credentials,
+    )
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(key)
+
+    url = blob.generate_signed_url(
+        version="v4",
+        expiration=expiration,
+        method="GET",
+        service_account_email=service_account_email,
+        access_token=credentials.token,
+    )
+    return url
 
 
 class MediaPersistenceService:
@@ -121,18 +181,33 @@ class MediaPersistenceService:
     async def get_signed_url(
         self, gcs_uri: str, expiry_seconds: int = 3600
     ) -> str:
-        """Return a v4 signed HTTPS URL for *gcs_uri* valid for *expiry_seconds*."""
+        """
+        Return a v4 signed HTTPS URL for *gcs_uri* valid for *expiry_seconds*.
+
+        Falls back to IAM-based signing when Compute Engine / Cloud Run
+        credentials have no private key.
+        """
         bucket_name, key = self._parse_gcs_uri(gcs_uri)
         expiration = datetime.timedelta(seconds=expiry_seconds)
 
         def _sync_sign() -> str:
             bucket = self._get_client().bucket(bucket_name)
             blob = bucket.blob(key)
-            return blob.generate_signed_url(
-                version="v4",
-                expiration=expiration,
-                method="GET",
-            )
+            try:
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=expiration,
+                    method="GET",
+                )
+            except (AttributeError, ValueError) as exc:
+                # Compute Engine / Cloud Run credentials lack a private key.
+                # Fall back to IAM-based signing.
+                logger.info(
+                    "MediaPersistenceService: falling back to IAM signing "
+                    "(reason: %s)",
+                    exc,
+                )
+                return _make_iam_signed_url(bucket_name, key, expiration)
 
         try:
             return await asyncio.to_thread(_sync_sign)
@@ -140,3 +215,10 @@ class MediaPersistenceService:
             raise MediaPersistenceError(
                 f"Failed to generate signed URL for '{gcs_uri}': {exc}", cause=exc
             ) from exc
+        except MediaPersistenceError:
+            raise
+        except Exception as exc:
+            raise MediaPersistenceError(
+                f"Failed to generate signed URL for '{gcs_uri}': {exc}", cause=exc
+            ) from exc
+

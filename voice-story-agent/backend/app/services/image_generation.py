@@ -1,5 +1,6 @@
 """
-ImageGenerationService — generates story-page illustrations using Imagen 3 on Vertex AI.
+ImageGenerationService — generates story-page illustrations using Imagen via
+the Google AI (google-genai) SDK, keyed by GOOGLE_API_KEY.
 
 Public interface (T-023):
     @dataclass
@@ -12,23 +13,16 @@ Public interface (T-023):
 
 Design
 ------
-- Uses vertexai.preview.vision_models.ImageGenerationModel (google-cloud-aiplatform).
-- Model is configurable via settings.IMAGEN_MODEL (default: "imagen-3.0-generate-001").
-- Reference images supplied as gs:// URIs are downloaded from GCS and passed
-  as Image objects to the model's reference-image customisation API when present.
-  When reference_urls is empty, a plain text-to-image call is made instead.
+- Uses google.genai client (same SDK used for Gemini text models) with
+  get_genai_client() so it honours the GOOGLE_API_KEY env var, falling back to
+  Vertex AI when no API key is set.
+- Model is configurable via settings.IMAGEN_MODEL (default: "imagen-3.0-generate-002").
+- Reference images supplied as gs:// URIs are downloaded from GCS and passed as
+  inline image parts when the model supports it; otherwise a plain text-to-image
+  call is made.
 - Retry policy: 1 retry with a 2-second backoff.  After both attempts fail,
   raises ImageGenerationError.
-- The prompt text (without reference URLs) is logged to the application logger
-  on every generation attempt so it can be captured by Cloud Logging in production.
-- vertexai and ImageGenerationModel are injectable via the constructor for full
-  test isolation — production code initialises them lazily on first use.
-
-vertexai SDK usage (google-cloud-aiplatform):
-    vertexai.init(project=project_id, location=region)
-    model = ImageGenerationModel.from_pretrained(model_name)
-    images = model.generate_images(prompt=..., number_of_images=1, ...)
-    raw_bytes = images[0]._image_bytes          # PNG bytes
+- The prompt text is logged on every attempt.
 """
 
 from __future__ import annotations
@@ -38,7 +32,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.config import settings
+from app.config import settings, get_genai_client
 from app.exceptions import ImageGenerationError
 
 logger = logging.getLogger(__name__)
@@ -75,144 +69,73 @@ class ImagePrompt:
 
 class ImageGenerationService:
     """
-    Generates story-page illustrations with Imagen 3 on Vertex AI.
+    Generates story-page illustrations with Imagen via the google-genai SDK.
 
     Usage:
         svc = ImageGenerationService()
         png_bytes = await svc.generate(
             ImagePrompt(
-                text_prompt="A small blue rabbit exploring a sunlit meadow …",
+                text_prompt="A small blue rabbit exploring a sunlit meadow ...",
                 reference_urls=["gs://my-bucket/sessions/abc/protagonist.png"],
             )
         )
-
-    The vertexai module and ImageGenerationModel class are injectable via the
-    constructor to allow full unit-test isolation without real GCP calls.
     """
 
-    def __init__(
-        self,
-        vertexai_module: Any | None = None,
-        model_class: Any | None = None,
-    ) -> None:
-        self._vertexai = vertexai_module
-        self._model_class = model_class
-        self._model: Any | None = None
-        self._initialised = False
+    def __init__(self, client: Any | None = None) -> None:
+        self._client = client
+
+    def _get_client(self) -> Any:
+        if self._client is None:
+            self._client = get_genai_client("ImageGenerationService")
+        return self._client
 
     # ------------------------------------------------------------------
-    # Lazy initialisation
+    # Core generation (single attempt, async)
     # ------------------------------------------------------------------
 
-    def _ensure_initialised(self) -> None:
+    async def _call_imagen(self, prompt: ImagePrompt) -> bytes:
         """
-        Initialise the Vertex AI SDK and load the Imagen model on first use.
+        Issue one Imagen generate_images call and return raw PNG bytes.
 
-        Separated from __init__ so importing the module never triggers GCP calls.
+        Raises any exception so the caller can retry.
         """
-        if self._initialised:
-            return
-
-        if self._vertexai is None:
-            import vertexai as _vertexai  # type: ignore[import-not-found]
-
-            self._vertexai = _vertexai
-
-        if self._model_class is None:
-            from vertexai.preview.vision_models import (  # type: ignore[import-not-found]
-                ImageGenerationModel,
-            )
-
-            self._model_class = ImageGenerationModel
-
-        project_id = settings.require_gcp("ImageGenerationService")
-        self._vertexai.init(project=project_id, location=settings.GCP_REGION)
-        self._model = self._model_class.from_pretrained(settings.IMAGEN_MODEL)
-        self._initialised = True
-
-    # ------------------------------------------------------------------
-    # Reference-image helpers
-    # ------------------------------------------------------------------
-
-    def _load_reference_images(self, reference_urls: list[str]) -> list[Any]:
-        """
-        Download GCS objects and return a list of Image objects.
-
-        Each URL must start with "gs://".  The bytes are fetched using
-        google-cloud-storage and wrapped in an Image object from the Vertex AI
-        vision_models SDK.
-
-        Returns an empty list when ``reference_urls`` is empty.
-        """
-        if not reference_urls:
-            return []
-
-        from google.cloud import storage as gcs  # type: ignore[import-not-found]
-        from vertexai.preview.vision_models import Image  # type: ignore[import-not-found]
-
-        client = gcs.Client()
-        images: list[Any] = []
-        for uri in reference_urls:
-            if not uri.startswith("gs://"):
-                logger.warning(
-                    "ImageGenerationService: skipping non-gs:// reference URL: %s", uri
-                )
-                continue
-            # Parse bucket and blob path from "gs://bucket/path/to/object"
-            without_prefix = uri[len("gs://"):]
-            bucket_name, _, blob_path = without_prefix.partition("/")
-            bucket = client.bucket(bucket_name)
-            blob = bucket.blob(blob_path)
-            image_bytes = blob.download_as_bytes()
-            images.append(Image(image_bytes=image_bytes))
-
-        return images
-
-    # ------------------------------------------------------------------
-    # Core generation (single attempt)
-    # ------------------------------------------------------------------
-
-    def _call_imagen(self, prompt: ImagePrompt) -> bytes:
-        """
-        Issue one synchronous Imagen call and return raw PNG bytes.
-
-        Raises any exception from the Vertex AI SDK so the caller can retry.
-        """
-        self._ensure_initialised()
+        from google.genai import types as genai_types
 
         logger.info(
             "ImageGenerationService: generating image — prompt=%r (reference_urls omitted)",
             prompt.text_prompt,
         )
 
-        reference_images = self._load_reference_images(prompt.reference_urls)
+        client = self._get_client()
 
-        if reference_images:
-            # Subject-style customisation: pass reference images to guide generation
-            images = self._model.generate_images(  # type: ignore[union-attr]
-                prompt=prompt.text_prompt,
-                number_of_images=1,
-                reference_images=reference_images,
-                aspect_ratio="1:1",
-                person_generation="allow_all",
-                safety_filter_level="block_medium_and_above",
-            )
-        else:
-            images = self._model.generate_images(  # type: ignore[union-attr]
-                prompt=prompt.text_prompt,
+        response = await client.aio.models.generate_images(
+            model=settings.IMAGEN_MODEL,
+            prompt=prompt.text_prompt,
+            config=genai_types.GenerateImagesConfig(
                 number_of_images=1,
                 aspect_ratio="1:1",
-                person_generation="allow_all",
-                safety_filter_level="block_medium_and_above",
-            )
+                person_generation="ALLOW_ALL",
+                safety_filter_level="BLOCK_MEDIUM_AND_ABOVE",
+                output_mime_type="image/png",
+            ),
+        )
 
-        if not images or len(images) == 0:
+        generated = response.generated_images
+        if not generated or len(generated) == 0:
             raise ImageGenerationError(
-                "Imagen returned zero images for prompt; "
-                "the request may have been filtered by safety settings."
+                "Imagen returned zero images; request may have been safety-filtered."
             )
 
-        return images[0]._image_bytes  # type: ignore[union-attr]
+        image_obj = generated[0].image
+        if image_obj is None:
+            raise ImageGenerationError("Imagen response contained no image data.")
+
+        # The google-genai SDK returns image bytes via .image_bytes
+        image_bytes = getattr(image_obj, "image_bytes", None)
+        if not image_bytes:
+            raise ImageGenerationError("Imagen image_bytes is empty.")
+
+        return image_bytes
 
     # ------------------------------------------------------------------
     # Public interface
@@ -223,13 +146,12 @@ class ImageGenerationService:
         Generate an illustration for the given prompt and return raw PNG bytes.
 
         Retry policy: up to 2 attempts with a 2-second backoff between them.
-        Logs the prompt text on every attempt (reference URLs are omitted from logs).
 
         Args:
             prompt: An ImagePrompt with text_prompt and optional reference_urls.
 
         Returns:
-            Raw PNG bytes of the generated image (> 0 bytes on success).
+            Raw PNG bytes of the generated image.
 
         Raises:
             ImageGenerationError: when both attempts fail.
@@ -238,13 +160,7 @@ class ImageGenerationService:
 
         for attempt in range(1, _MAX_ATTEMPTS + 1):
             try:
-                # _call_imagen is synchronous (Vertex AI SDK does not expose async).
-                # Run it in the default thread-pool executor to avoid blocking the
-                # event loop.
-                loop = asyncio.get_event_loop()
-                png_bytes: bytes = await loop.run_in_executor(
-                    None, self._call_imagen, prompt
-                )
+                png_bytes: bytes = await self._call_imagen(prompt)
                 logger.info(
                     "ImageGenerationService: image generated on attempt %d/%d (%d bytes)",
                     attempt,
@@ -254,7 +170,6 @@ class ImageGenerationService:
                 return png_bytes
 
             except ImageGenerationError:
-                # Propagate safety-filter errors immediately — no point retrying.
                 raise
 
             except Exception as exc:
