@@ -110,6 +110,8 @@ export interface UseStoryStateReturn {
    * Called after a WebSocket reconnect to recover any missed events.
    */
   hydrate: (session: HydrateSession) => void;
+  /** Manually push a caption (e.g. a local user transcript). */
+  addCaption: (caption: Caption) => void;
   /** Reset all state back to initial empty values. */
   reset: () => void;
 }
@@ -304,6 +306,14 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // addCaption — manually push a caption (e.g. local user transcript)
+  // ---------------------------------------------------------------------------
+
+  const addCaption = useCallback((caption: Caption) => {
+    setCaptions((prev) => [...prev, caption]);
+  }, []);
+
+  // ---------------------------------------------------------------------------
   // reset
   // ---------------------------------------------------------------------------
 
@@ -320,6 +330,7 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
     steeringWindowOpen,
     steeringWindowPage,
     hydrate,
+    addCaption,
     reset,
   };
 }

@@ -102,12 +102,14 @@ export interface UseVoiceSessionReturn {
   isReady: boolean;
   /** The active WsClient for this session (null before startSession succeeds). */
   wsClient: WsClient | null;
+  /** Live speech-to-text transcript updated in real-time while the mic is active. */
+  liveTranscript: string;
   /** Start the session: creates session, reserves ADK slot, connects WS, starts mic. */
   startSession: () => Promise<void>;
   /** Start microphone capture for an existing session (without creating a new session). */
   startMic: () => Promise<void>;
-  /** Stop only the microphone — keeps WebSocket open so story events can still arrive. */
-  stopMic: () => void;
+  /** Stop only the microphone — keeps WebSocket open. Returns the captured transcript text. */
+  stopMic: () => string;
   /** Stop streaming and disconnect cleanly (full teardown). */
   stopSession: () => void;
 }
@@ -189,6 +191,7 @@ export function useVoiceSession(
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const [wsClient, setWsClientState] = useState<WsClient | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState("");
 
   const wsClientRef = useRef<WsClient | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -278,6 +281,8 @@ export function useVoiceSession(
       setError({ code: "no_ws_session", message: "WebSocket session not ready yet" });
       return;
     }
+    setLiveTranscript("");
+    transcriptBufferRef.current = "";
 
     const mediaDevices =
       _mediaDevices ??
@@ -350,16 +355,18 @@ export function useVoiceSession(
         recognition.lang = "en-US";
         recognition.onresult = (evt) => {
           let finalText = "";
-          for (let i = evt.resultIndex; i < evt.results.length; i++) {
+          let interimText = "";
+          for (let i = 0; i < evt.results.length; i++) {
             const result = evt.results[i] ?? evt.results.item(i);
             const transcript = result?.[0]?.transcript?.trim() ?? "";
-            if (result?.isFinal && transcript) {
+            if (result?.isFinal) {
               finalText += `${transcript} `;
+            } else {
+              interimText += `${transcript} `;
             }
           }
-          if (finalText.trim()) {
-            transcriptBufferRef.current = `${transcriptBufferRef.current} ${finalText}`.trim();
-          }
+          transcriptBufferRef.current = finalText.trim();
+          setLiveTranscript(`${finalText}${interimText}`.trim());
         };
         recognition.onerror = () => { /* ignore; PCM stream still active */ };
         recognition.onend = () => { /* no-op */ };
@@ -492,18 +499,20 @@ export function useVoiceSession(
   // stopMic — stop only the microphone, keep WebSocket open
   // ---------------------------------------------------------------------------
 
-  const stopMic = useCallback(() => {
+  const stopMic = useCallback((): string => {
     const transcriptText = transcriptBufferRef.current.trim();
+    const text = transcriptText ||
+      "I want a fun bedtime story about a brave little rabbit who goes on an adventure in a magical forest";
     if (wsClientRef.current?.isConnected) {
-      const text = transcriptText ||
-        "I want a fun bedtime story about a brave little rabbit who goes on an adventure in a magical forest";
       wsClientRef.current.send({
         type: "transcript_input",
         text,
       });
     }
     transcriptBufferRef.current = "";
+    setLiveTranscript("");
     stopStreaming();
+    return text;
   }, [stopStreaming]);
 
   // ---------------------------------------------------------------------------
@@ -523,6 +532,7 @@ export function useVoiceSession(
     setReconnectAttempt(0);
     setIsReady(false);
     setWsClientState(null);
+    setLiveTranscript("");
   }, [disconnect]);
 
   // ---------------------------------------------------------------------------
@@ -545,6 +555,7 @@ export function useVoiceSession(
     reconnectAttempt,
     isReady,
     wsClient,
+    liveTranscript,
     startSession,
     startMic,
     stopMic,

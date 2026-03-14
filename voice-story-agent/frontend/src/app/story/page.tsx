@@ -22,7 +22,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { useVoiceSession } from "@/hooks/useVoiceSession";
 import { useStoryState } from "@/hooks/useStoryState";
 import type {
@@ -33,6 +33,7 @@ import type {
 } from "@/lib/wsTypes";
 import { StoryBook } from "@/components/StoryBook";
 import { CaptionBar } from "@/components/CaptionBar";
+import type { PartialCaption } from "@/components/CaptionBar";
 import { VoiceButton } from "@/components/VoiceButton";
 
 // ---------------------------------------------------------------------------
@@ -104,16 +105,31 @@ export default function StoryAppPage() {
     if (!voice.sessionId) {
       voice.startSession().catch(() => { /* error shown in UI */ });
     } else if (voice.isListening) {
-      voice.stopMic();
+      const text = voice.stopMic();
+      story.addCaption({
+        role: "user",
+        text,
+        turnId: `local-${Date.now()}`,
+        isFinal: true,
+      });
       setIsProcessing(true);
     } else {
       setIsProcessing(false);
       voice.startMic().catch(() => { /* error shown in UI */ });
     }
-  }, [voice]);
+  }, [voice, story]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const totalPages = 5;
+
+  const partialCaption: PartialCaption | null = useMemo(() => {
+    if (!voice.isListening || !voice.liveTranscript) return null;
+    return {
+      turnId: `live-${voice.sessionId}`,
+      role: "user" as const,
+      text: voice.liveTranscript,
+    };
+  }, [voice.isListening, voice.liveTranscript, voice.sessionId]);
 
   // ── Status message shown in the center of the screen ───────────────────
   const statusMessage = (() => {
@@ -214,6 +230,7 @@ export default function StoryAppPage() {
       {/* Caption bar — fixed bottom strip */}
       <CaptionBar
         captions={story.captions}
+        partialCaption={partialCaption}
         safetyRewrite={safetyRewrite}
         safetyAccepted={safetyAccepted}
         className="pb-28"
