@@ -22,7 +22,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useVoiceSession } from "@/hooks/useVoiceSession";
 import { useStoryState } from "@/hooks/useStoryState";
 import type {
@@ -43,6 +43,12 @@ import { VoiceButton } from "@/components/VoiceButton";
 export default function StoryAppPage() {
   // ── Voice session lifecycle ─────────────────────────────────────────────
   const voice = useVoiceSession();
+
+  // Unlock browser autoplay policy on the first user gesture (mic tap).
+  // A silent play()+pause() on this element marks the page as having had
+  // a media-related user interaction, allowing subsequent .play() calls on
+  // story narration audio elements to succeed without a NotAllowedError.
+  const audioUnlockRef = useRef<HTMLAudioElement>(null);
 
   // ── Story state driven by the single WsClient owned by useVoiceSession ──
   const story = useStoryState(voice.wsClient);
@@ -93,6 +99,11 @@ export default function StoryAppPage() {
 
   // ── Interrupt / feedback handlers ────────────────────────────────────────
   const handleInterrupt = useCallback(() => {
+    // Unlock autoplay on the first gesture.
+    if (audioUnlockRef.current) {
+      audioUnlockRef.current.play().catch(() => {});
+      audioUnlockRef.current.pause();
+    }
     if (voice.sessionId && voice.wsClient) {
       voice.wsClient.send({
         type: "interrupt",
@@ -102,6 +113,11 @@ export default function StoryAppPage() {
   }, [voice.sessionId, voice.wsClient, story.steeringWindowPage]);
 
   const handleFeedback = useCallback(() => {
+    // Unlock autoplay on the first gesture.
+    if (audioUnlockRef.current) {
+      audioUnlockRef.current.play().catch(() => {});
+      audioUnlockRef.current.pause();
+    }
     if (!voice.sessionId) {
       voice.startSession().catch(() => { /* error shown in UI */ });
     } else if (voice.isListening) {
@@ -211,7 +227,7 @@ export default function StoryAppPage() {
       )}
 
       {/* StoryBook carousel — takes all remaining vertical space */}
-      <div className="flex flex-1 overflow-hidden" data-testid="story-book-wrapper">
+      <div className="flex flex-1 overflow-y-auto pb-72" data-testid="story-book-wrapper">
         <StoryBook
           pages={story.pages}
           isGenerating={isGenerating}
@@ -227,7 +243,6 @@ export default function StoryAppPage() {
         partialCaption={partialCaption}
         safetyRewrite={safetyRewrite}
         safetyAccepted={safetyAccepted}
-        className="pb-28"
       />
 
       {/* Voice button — floating above the caption bar */}
@@ -240,6 +255,10 @@ export default function StoryAppPage() {
           onFeedback={handleFeedback}
         />
       </div>
+
+      {/* Silent audio element used to unlock browser autoplay policy on first mic tap */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio ref={audioUnlockRef} src="" className="hidden" aria-hidden="true" />
     </main>
   );
 }

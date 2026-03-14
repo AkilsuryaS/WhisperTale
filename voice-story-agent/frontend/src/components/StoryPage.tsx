@@ -97,7 +97,9 @@ export function StoryPage({ page, pageNumber, totalPages, isActive }: StoryPageP
   useEffect(() => {
     if (!audioRef.current) return;
     if (isActive && page.audioUrl) {
-      audioRef.current.play().catch(() => {});
+      audioRef.current.play().catch((err) => {
+        console.warn(`[StoryPage] audio.play() blocked (page ${pageNumber}):`, err);
+      });
     } else {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
