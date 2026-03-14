@@ -1271,8 +1271,10 @@ without field loss.
 ### T-028 · SteeringRouter (classify_steering)
 
 **Priority**: P2
+**Status**: ✅ Done — `app/websocket/steering_router.py` implemented with `SteeringClassification` frozen dataclass (`type: CommandType | Literal["ambiguous", "unsafe"]`, `confidence: float`, `detail: str | None`) and pure synchronous function `classify_steering(utterance: str, safety_result: SafetyResult) -> SteeringClassification`. Six classification outcomes in priority order: (1) `unsafe` — `safety_result.safe == False` always wins, `confidence=1.0`; (2) `tone_change` — regex patterns for "funnier", "sillier", "calmer", "scarier", "more exciting", "sleepier"; (3) `pacing_change` — "faster", "slower", "shorter", "longer", "more detail"; (4) `element_reintroduction` — "bring back", "remember the", "what happened to"; (5) `character_introduction` — "add a", "give him/her/them a", "introduce", "new friend", "new character"; (6) `ambiguous` — no pattern matched, `confidence=1.0`. All patterns compiled at import time with `re.IGNORECASE`. 48 pure unit tests covering all 4 spec "Done when" bullets, all classification types, unsafe-always-wins, case-insensitivity, confidence values, detail content, frozen dataclass enforcement, and valid confidence range. 732 total passing (30 integration tests deselected). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/websocket/steering_router.py`
+- `voice-story-agent/backend/tests/test_t028_steering_router.py`
 
 **Description**:
 Implement pure synchronous function:
