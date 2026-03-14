@@ -1344,9 +1344,12 @@ Returns a new arc list with pages `from_page..5` updated; pages before `from_pag
 ### T-030 · Steering window + VoiceCommand flow
 
 **Priority**: P2
+**Status**: ✅ Done — `app/websocket/steering_handler.py` implemented with `SteeringHandler` class and `run_steering_window(session_id, page_number, emit, *, window_seconds, turn_queue)`. Full flow: emits `steering_window_open(page, duration_ms)` → waits on `turn_queue` with `asyncio.wait_for(window_seconds)` → on timeout emits `steering_window_closed(reason="timeout")`; on silent turn emits `steering_window_closed(reason="user_silent")`. Safe turns: `classify_steering` → if `ambiguous`: `voice_svc.speak(_CLARIFYING_QUESTION)` + await second turn + reclassify; if still ambiguous → `steering_window_closed(reason="ambiguous")`; if classified: emits `voice_command_received`, calls `StoryPlannerService.apply_steering`, `SessionStore.update_story_arc`, persists `VoiceCommand`, if `character_introduction` calls `CharacterBibleService.add_secondary_character` (new method added), emits `voice_command_applied`, then `steering_window_closed(reason="voice_command_applied")`. Unsafe turns → `steering_window_closed(reason="unsafe")`. `CharacterBibleService.add_secondary_character(session_id, char_ref)` added — fetches bible, appends `CharacterRef`, persists via `update_character_bible_field`. `story_ws.py` `_page_generation_loop` updated to accept `safety_svc` and `voice_svc` parameters and call `make_steering_handler` per page boundary (fallback to bare sleep when services not injected). `_turn_loop` updated to forward `safety_svc` and `voice_svc` to loop. 18 mock-based tests covering all 5 spec "Done when" criteria: timeout, tone_change event order, ambiguous clarifying speak, character_introduction adds character, steering_window_closed after applied — plus unsafe turn, user_silent, event ordering, arc update, and `_derive_char_ref` unit test. 778 total passing (30 integration tests deselected). Ruff clean.
 **Files**:
-- `voice-story-agent/backend/app/websocket/story_ws.py` (extend)
 - `voice-story-agent/backend/app/websocket/steering_handler.py` (new)
+- `voice-story-agent/backend/app/websocket/story_ws.py` (extend)
+- `voice-story-agent/backend/app/services/character_bible_service.py` (add add_secondary_character)
+- `voice-story-agent/backend/tests/test_t030_steering_handler.py`
 
 **Description**:
 Implement `SteeringHandler`:

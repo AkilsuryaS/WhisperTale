@@ -49,6 +49,7 @@ from app.config import settings
 from app.exceptions import CharacterBibleServiceError
 from app.models.character_bible import (
     CharacterBible,
+    CharacterRef,
     ContentPolicy,
     ProtagonistProfile,
     StyleBible,
@@ -429,4 +430,58 @@ class CharacterBibleService:
             "CharacterBibleService: reference image set (session=%s, uri=%s)",
             session_id,
             gcs_uri,
+        )
+
+    async def add_secondary_character(
+        self,
+        session_id: str,
+        char_ref: CharacterRef,
+    ) -> None:
+        """
+        Append a secondary CharacterRef to the session's CharacterBible.
+
+        Fetches the current CharacterBible, appends the new CharacterRef to
+        ``character_refs``, and persists the updated document.
+
+        Args:
+            session_id: The session whose CharacterBible to update.
+            char_ref:   The CharacterRef to append.
+
+        Raises:
+            CharacterBibleServiceError: on Firestore read or write failure.
+        """
+        try:
+            store = self._get_store()
+            bible = await store.get_character_bible(session_id)
+            if bible is None:
+                raise CharacterBibleServiceError(
+                    f"CharacterBible not found for session {session_id}",
+                    cause=None,
+                )
+            updated_refs = list(bible.character_refs) + [char_ref]
+            serialised = [r.model_dump(mode="json") for r in updated_refs]
+            await store.update_character_bible_field(
+                session_id, "character_refs", serialised
+            )
+        except CharacterBibleServiceError:
+            raise
+        except Exception as exc:
+            logger.error(
+                "CharacterBibleService: failed to add secondary character "
+                "(session=%s, char_id=%s, error_type=%s)",
+                session_id,
+                char_ref.char_id,
+                type(exc).__name__,
+            )
+            raise CharacterBibleServiceError(
+                "Failed to add secondary character to CharacterBible",
+                cause=exc,
+            ) from exc
+
+        logger.info(
+            "CharacterBibleService: secondary character added "
+            "(session=%s, char_id=%s, name=%s)",
+            session_id,
+            char_ref.char_id,
+            char_ref.name,
         )
