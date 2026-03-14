@@ -1,0 +1,56 @@
+# apphosting.yaml — Firebase App Hosting configuration for the Voice Story Agent frontend.
+#
+# Firebase App Hosting handles Next.js builds natively (SSR + static assets).
+# Do NOT add `output: "export"` to next.config.mjs — App Hosting needs the
+# full Next.js build artefacts, not a static export.
+#
+# Environment variables are injected at build time and are available to
+# both the Next.js server (for SSR) and the client bundle (NEXT_PUBLIC_* vars).
+#
+# Required secrets (set in Firebase console → App Hosting → your backend →
+# Secrets, or via `firebase apphosting:secrets:set`):
+#   NEXT_PUBLIC_API_BASE_URL  — HTTPS URL of the Cloud Run backend service
+#                               e.g. https://voice-story-backend-xxxx-uc.a.run.app
+#   NEXT_PUBLIC_WS_BASE_URL   — WebSocket URL of the same service
+#                               e.g. wss://voice-story-backend-xxxx-uc.a.run.app
+#
+# How to set secrets (replace placeholders with real values):
+#   firebase apphosting:secrets:set NEXT_PUBLIC_API_BASE_URL \
+#     --project YOUR_FIREBASE_PROJECT_ID
+#   firebase apphosting:secrets:set NEXT_PUBLIC_WS_BASE_URL \
+#     --project YOUR_FIREBASE_PROJECT_ID
+#
+# After setting secrets, redeploy:
+#   git push origin main
+# ─────────────────────────────────────────────────────────────────────────────
+
+runConfig:
+  # Allow up to 4 concurrent requests per instance; scale down to 0 when idle.
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 10
+
+env:
+  # ── Backend endpoints ──────────────────────────────────────────────────────
+  # These MUST be overridden for production.  The defaults below point at the
+  # local dev server so the app builds successfully without real secrets.
+  - variable: NEXT_PUBLIC_API_BASE_URL
+    secret: NEXT_PUBLIC_API_BASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_WS_BASE_URL
+    secret: NEXT_PUBLIC_WS_BASE_URL
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # ── Node environment ───────────────────────────────────────────────────────
+  - variable: NODE_ENV
+    value: production
+    availability:
+      - BUILD
+      - RUNTIME

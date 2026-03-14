@@ -1734,10 +1734,12 @@ Set Cloud Run env vars: all config values from `config.py`.
 ### T-043 · Firebase App Hosting frontend deploy config
 
 **Priority**: P1
+**Status**: ✅ Done — `voice-story-agent/frontend/apphosting.yaml` created: `runConfig` block (`concurrency: 80`, `cpu: 1`, `memoryMiB: 512`, `minInstances: 0`, `maxInstances: 10`); `env` array with `NEXT_PUBLIC_API_BASE_URL` (secret reference, `availability: [BUILD, RUNTIME]`), `NEXT_PUBLIC_WS_BASE_URL` (secret reference, `availability: [BUILD, RUNTIME]`), `NODE_ENV=production` (plain value, BUILD+RUNTIME). `voice-story-agent/frontend/.firebaserc` created: `{"projects": {"default": "YOUR_FIREBASE_PROJECT_ID"}}` — caller replaces with their Firebase project ID via `firebase use`. `voice-story-agent/infra/firebase-deploy.sh` written (executable): `set -euo pipefail`; 5-step script: (1) prerequisites check (firebase + git CLIs); (2) `firebase use ${PROJECT_ID}`; (3) next.config.mjs guard — exits with error if `output.*export` is found; (4) `git push ${REMOTE} ${CURRENT_BRANCH}:${BRANCH}` — App Hosting automatically builds and deploys on push; (5) `firebase apphosting:backends:get` → prints App Hosting URL + `/story` page + instructions to set secrets. `next.config.mjs` confirmed: no `output: "export"` — App Hosting handles Next.js builds natively. 36 pytest tests in `tests/test_t043_firebase_deploy_config.py` validating: apphosting.yaml (valid YAML, env section, API/WS URL vars defined with BUILD+RUNTIME availability, secret refs, runConfig concurrency/memory, NODE_ENV=production); .firebaserc (valid JSON, projects key, default project string); firebase-deploy.sh (exists, executable, shebang, strict mode, usage, git push, NEXT_PUBLIC_API_BASE_URL + WS refs, apphosting CLI ref, output:export guard, PROJECT_ID/BRANCH vars, firebase use, URL printed); next.config.mjs (exists, no output:export, reactStrictMode still present). 958 total passing (36 new + 922 previous; 2 pre-existing flaky safety tests excluded).
 **Files**:
-- `voice-story-agent/frontend/apphosting.yaml`
-- `voice-story-agent/frontend/.firebaserc`
-- `voice-story-agent/infra/firebase-deploy.sh`
+- `voice-story-agent/frontend/apphosting.yaml` (new)
+- `voice-story-agent/frontend/.firebaserc` (new)
+- `voice-story-agent/infra/firebase-deploy.sh` (new)
+- `voice-story-agent/backend/tests/test_t043_firebase_deploy_config.py` (new)
 
 **Description**:
 Configure Firebase App Hosting for Next.js (primary target — handles SSR natively):
