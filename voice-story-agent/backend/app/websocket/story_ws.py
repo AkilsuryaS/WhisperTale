@@ -147,6 +147,10 @@ class _PageLoopState:
                          as the source of synthetic user turns.
     in_steering_window:  True while a steering window is active; guards against
                          duplicate ``interrupt`` handling.
+    user_interrupted:    True when the user actively interrupted (via mic tap)
+                         rather than entering a natural between-page window.
+                         Extends the steering timeout and suppresses ADK noise.
+    page_loop_active:    True while the page generation loop is running.
     """
 
     interrupt_event: asyncio.Event = field(default_factory=asyncio.Event)
@@ -155,6 +159,8 @@ class _PageLoopState:
     )
     in_steering_window: bool = False
     page_loop_started: bool = False
+    user_interrupted: bool = False
+    page_loop_active: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -421,9 +427,13 @@ async def _page_generation_loop(
 
     # Ensure we have a state object (may be None when called from tests or REST)
     loop_state = page_loop_state or _PageLoopState()
+    loop_state.page_loop_active = True
 
     # T-032: in-memory page history; seeded from persisted data on reconnect
     page_history: list[str] = list(initial_page_history) if initial_page_history else []
+
+    # Extended timeout (seconds) when the user actively interrupted mid-page.
+    _USER_INTERRUPT_TIMEOUT = 120.0
 
     async def ws_emit(event_type: str, **fields: object) -> None:
         try:
@@ -536,14 +546,34 @@ async def _page_generation_loop(
 
             # Steering window between pages (not after the last page)
             if page_number < 5:
+                was_user_interrupt = loop_state.user_interrupted
+                effective_timeout = (
+                    _USER_INTERRUPT_TIMEOUT
+                    if was_user_interrupt
+                    else steering_window_seconds
+                )
+
+                # Only drain stale turns for natural (between-page) windows.
+                # User-initiated interrupts may already have a queued turn
+                # from transcript_input that we must NOT discard.
+                if not was_user_interrupt:
+                    try:
+                        while True:
+                            loop_state.steering_turn_queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        pass
+
                 loop_state.in_steering_window = True
-                # Drop any stale turns from prior windows to avoid applying
-                # old feedback to the wrong page.
-                try:
-                    while True:
-                        loop_state.steering_turn_queue.get_nowait()
-                except asyncio.QueueEmpty:
-                    pass
+
+                logger.info(
+                    "_page_generation_loop: steering window opened "
+                    "(session=%s, page=%d, user_interrupt=%s, timeout=%.0fs)",
+                    session_id,
+                    page_number,
+                    was_user_interrupt,
+                    effective_timeout,
+                )
+
                 steering_handler = make_steering_handler(
                     safety_svc=safety_svc,  # type: ignore[arg-type]
                     story_planner=story_planner,
@@ -558,7 +588,7 @@ async def _page_generation_loop(
                         session_id=session_id,
                         page_number=page_number,
                         emit=ws_emit,
-                        window_seconds=steering_window_seconds,
+                        window_seconds=effective_timeout,
                         turn_queue=loop_state.steering_turn_queue,
                     )
                 else:
@@ -573,6 +603,7 @@ async def _page_generation_loop(
                     close_reason = "timeout"
 
                 loop_state.in_steering_window = False
+                loop_state.user_interrupted = False  # reset after window closes
 
                 # If a steering command was applied, regenerate this same page
                 # with the updated beat so text/image/audio reflect the change
@@ -637,6 +668,8 @@ async def _page_generation_loop(
             await ws_emit("session_error", code="page_generation_error")
         except Exception:
             pass
+    finally:
+        loop_state.page_loop_active = False
 
 
 # ---------------------------------------------------------------------------
@@ -708,7 +741,18 @@ async def _turn_loop(
                 # While steering window is open, route spoken mic turns to the
                 # steering queue so they update the arc (instead of setup flow).
                 if loop_state.in_steering_window:
-                    await loop_state.steering_turn_queue.put(turn)
+                    # During user-initiated interrupts the mic is live, so the
+                    # ADK produces noisy partial "final" turns.  Skip them and
+                    # rely on the complete transcript_input from the frontend.
+                    if not loop_state.user_interrupted:
+                        await loop_state.steering_turn_queue.put(turn)
+                    else:
+                        logger.debug(
+                            "_turn_loop: skipping ADK turn during user-interrupt "
+                            "steering window (session=%s, text=%r)",
+                            session_id,
+                            turn.transcript[:60] if turn.transcript else "",
+                        )
                     continue
                 if safety_gate.awaiting_ack:
                     await _complete_safety_ack(ws, session_id, store, safety_gate)
@@ -998,6 +1042,28 @@ async def story_websocket(
 
                 if page_loop_state.in_steering_window:
                     await page_loop_state.steering_turn_queue.put(synthetic_turn)
+                    logger.info(
+                        "transcript_input routed to active steering window "
+                        "(session=%s)",
+                        session_id,
+                    )
+                    continue
+
+                # Fallback: page loop is running but the steering window has
+                # already closed (e.g. 10 s timeout expired while user was
+                # still speaking).  Pre-queue the turn and force an interrupt
+                # so the page loop opens a new steering window to process it.
+                if page_loop_state.page_loop_active:
+                    page_loop_state.user_interrupted = True
+                    await page_loop_state.steering_turn_queue.put(synthetic_turn)
+                    if not page_loop_state.interrupt_event.is_set():
+                        page_loop_state.interrupt_event.set()
+                    logger.info(
+                        "transcript_input: force-entering steering "
+                        "(session=%s, text=%r)",
+                        session_id,
+                        text[:80],
+                    )
                     continue
 
                 if safety_gate.awaiting_ack:
@@ -1075,9 +1141,11 @@ async def story_websocket(
             elif msg_type == "interrupt":
                 # T-031: client interrupts mid-narration to enter steering window
                 if not page_loop_state.in_steering_window:
+                    page_loop_state.user_interrupted = True
                     page_loop_state.interrupt_event.set()
                     logger.info(
-                        "WS interrupt received (session=%s)", session_id
+                        "WS interrupt received (session=%s, user_interrupted=True)",
+                        session_id,
                     )
                     logger.info(
                         "voice command received and applied: interrupt",

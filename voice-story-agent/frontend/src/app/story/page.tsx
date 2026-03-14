@@ -95,6 +95,15 @@ export default function StoryAppPage() {
   // false → bar hidden; only small FAB shown (reading mode, pages present)
   const [barExpanded, setBarExpanded] = useState(true);
 
+  // Expand the bar whenever the mic becomes active so the stop button is
+  // always visible.  Without this, the auto-collapse effect below can hide
+  // the bar before startMic() finishes and sets isListening=true.
+  useEffect(() => {
+    if (voice.isListening) {
+      setBarExpanded(true);
+    }
+  }, [voice.isListening]);
+
   // Auto-collapse the bar once the user stops speaking and pages are visible.
   useEffect(() => {
     if (!voice.isListening && !isProcessing && story.pages.size > 0) {
@@ -338,19 +347,26 @@ export default function StoryAppPage() {
       {story.pages.size > 0 && !barExpanded && (
         <button
           type="button"
-          aria-label="Tap to speak"
+          aria-label={voice.isListening ? "Tap to stop" : "Tap to speak"}
           onClick={handleFeedback}
           className={[
             "fixed bottom-5 right-5 z-30",
             "flex h-14 w-14 items-center justify-center rounded-full shadow-xl",
-            "bg-purple-500 text-white",
-            "hover:bg-purple-600 active:bg-purple-700",
+            voice.isListening
+              ? "bg-red-500 text-white hover:bg-red-600 active:bg-red-700 animate-pulse"
+              : "bg-purple-500 text-white hover:bg-purple-600 active:bg-purple-700",
             "transition-colors duration-150",
             "focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-400 focus-visible:ring-offset-2",
           ].join(" ")}
           data-testid="mic-fab"
         >
-          <SmallMicIcon />
+          {voice.isListening ? (
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="h-6 w-6">
+              <rect x="6" y="6" width="12" height="12" rx="2" />
+            </svg>
+          ) : (
+            <SmallMicIcon />
+          )}
         </button>
       )}
 

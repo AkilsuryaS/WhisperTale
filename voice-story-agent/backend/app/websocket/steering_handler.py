@@ -148,6 +148,13 @@ class SteeringHandler:
             duration_ms=int(window_seconds * 1000),
         )
 
+        logger.info(
+            "SteeringHandler: window opened (session=%s, page=%d, timeout=%.0fs)",
+            session_id,
+            page_number,
+            window_seconds,
+        )
+
         close_reason = await self._collect_command(
             session_id=session_id,
             page_number=page_number,
@@ -156,6 +163,12 @@ class SteeringHandler:
             turn_queue=turn_queue,
         )
 
+        logger.info(
+            "SteeringHandler: window closed (session=%s, page=%d, reason=%s)",
+            session_id,
+            page_number,
+            close_reason,
+        )
         await emit("steering_window_closed", page=page_number, reason=close_reason)
         return close_reason
 
@@ -188,8 +201,15 @@ class SteeringHandler:
             return "timeout"
 
         if turn is None:
-            # Sentinel: window closed externally
+            logger.info("SteeringHandler: sentinel received (session=%s)", session_id)
             return "timeout"
+
+        logger.info(
+            "SteeringHandler: turn received (session=%s, page=%d, text=%r)",
+            session_id,
+            page_number,
+            turn.transcript[:80] if turn.transcript else "",
+        )
 
         # Silence signal
         if not turn.transcript or not turn.transcript.strip():
@@ -207,6 +227,13 @@ class SteeringHandler:
 
         # Classify
         classification = classify_steering(turn.transcript, safety_result)
+        logger.info(
+            "SteeringHandler: classified (session=%s, type=%s, confidence=%.2f, detail=%r)",
+            session_id,
+            classification.type,
+            classification.confidence,
+            classification.detail[:80] if classification.detail else None,
+        )
 
         # Ambiguous: ask one clarifying question, await one more turn
         if classification.type == "ambiguous":
