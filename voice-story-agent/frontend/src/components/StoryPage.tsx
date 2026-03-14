@@ -34,6 +34,8 @@ export interface StoryPageProps {
   totalPages: number;
   /** True when this page is the currently visible slide — gates audio playback. */
   isActive: boolean;
+  /** True while mic is open; pauses narration playback. */
+  isNarrationPaused?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -87,7 +89,13 @@ function AudioFallback() {
 // StoryPage component
 // ---------------------------------------------------------------------------
 
-export function StoryPage({ page, pageNumber, totalPages, isActive }: StoryPageProps) {
+export function StoryPage({
+  page,
+  pageNumber,
+  totalPages,
+  isActive,
+  isNarrationPaused = false,
+}: StoryPageProps) {
   const hasText = page.text !== null;
   const hasImage = page.imageUrl !== null;
   const hasAudio = page.audioUrl !== null;
@@ -96,15 +104,18 @@ export function StoryPage({ page, pageNumber, totalPages, isActive }: StoryPageP
 
   useEffect(() => {
     if (!audioRef.current) return;
-    if (isActive && page.audioUrl) {
+    if (isActive && page.audioUrl && !isNarrationPaused) {
       audioRef.current.play().catch((err) => {
         console.warn(`[StoryPage] audio.play() blocked (page ${pageNumber}):`, err);
       });
-    } else {
+    } else if (!isActive) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+    } else if (isNarrationPaused) {
+      // Pause while mic is open and resume from same position on close.
+      audioRef.current.pause();
     }
-  }, [isActive, page.audioUrl]);
+  }, [isActive, page.audioUrl, isNarrationPaused, pageNumber]);
 
   return (
     <article

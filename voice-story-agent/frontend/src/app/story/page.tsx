@@ -172,10 +172,18 @@ export default function StoryAppPage() {
       voice.stopMic();
       setIsProcessing(true);
     } else {
+      // If user wants to speak while pages are visible, request an interrupt so
+      // backend opens/enters steering flow for applying story changes.
+      if (voice.wsClient && story.pages.size > 0 && !story.steeringWindowOpen) {
+        voice.wsClient.send({
+          type: "interrupt",
+          page_number: story.steeringWindowPage ?? 1,
+        });
+      }
       setIsProcessing(false);
       voice.startMic().catch(() => { /* error shown in UI */ });
     }
-  }, [voice]);
+  }, [voice, story.pages.size, story.steeringWindowOpen, story.steeringWindowPage]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const totalPages = 5;
@@ -294,6 +302,7 @@ export default function StoryAppPage() {
           storyComplete={storyComplete}
           steeringWindowOpen={story.steeringWindowOpen}
           totalPages={totalPages}
+          pauseNarration={voice.isListening}
         />
       </div>
 

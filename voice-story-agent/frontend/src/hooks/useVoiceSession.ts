@@ -530,9 +530,8 @@ export function useVoiceSession(
 
   const stopMic = useCallback((): string => {
     const transcriptText = transcriptBufferRef.current.trim();
-    const text = transcriptText ||
-      "I want a fun bedtime story about a brave little rabbit who goes on an adventure in a magical forest";
-    if (wsClientRef.current?.isConnected) {
+    const text = transcriptText;
+    if (text && wsClientRef.current?.isConnected) {
       wsClientRef.current.send({
         type: "transcript_input",
         text,

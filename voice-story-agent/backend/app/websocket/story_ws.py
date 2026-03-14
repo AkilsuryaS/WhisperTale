@@ -535,6 +535,13 @@ async def _page_generation_loop(
             # Steering window between pages (not after the last page)
             if page_number < 5:
                 loop_state.in_steering_window = True
+                # Drop any stale turns from prior windows to avoid applying
+                # old feedback to the wrong page.
+                try:
+                    while True:
+                        loop_state.steering_turn_queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
                 steering_handler = make_steering_handler(
                     safety_svc=safety_svc,  # type: ignore[arg-type]
                     story_planner=story_planner,
@@ -656,6 +663,11 @@ async def _turn_loop(
                         "safety_awaiting_ack": safety_gate.awaiting_ack,
                     },
                 )
+                # While steering window is open, route spoken mic turns to the
+                # steering queue so they update the arc (instead of setup flow).
+                if loop_state.in_steering_window:
+                    await loop_state.steering_turn_queue.put(turn)
+                    continue
                 if safety_gate.awaiting_ack:
                     await _complete_safety_ack(ws, session_id, store, safety_gate)
                 else:
@@ -920,6 +932,8 @@ async def story_websocket(
                 text = (
                     str(data.get("text", "")) if isinstance(data, dict) else ""
                 )
+                if not text.strip():
+                    continue
                 turn_id = str(uuid.uuid4())
                 synthetic_turn = VoiceTurn(
                     role="user",
@@ -939,6 +953,10 @@ async def story_websocket(
                     phase="setup",
                     turn_id=turn_id,
                 )
+
+                if page_loop_state.in_steering_window:
+                    await page_loop_state.steering_turn_queue.put(synthetic_turn)
+                    continue
 
                 if safety_gate.awaiting_ack:
                     await _complete_safety_ack(

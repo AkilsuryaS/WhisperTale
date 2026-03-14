@@ -44,6 +44,8 @@ export interface StoryBookProps {
   steeringWindowOpen: boolean;
   /** Total pages in the story (for "Page N of M" labels). Default: 5. */
   totalPages?: number;
+  /** True when narration should be paused (e.g. mic is open). */
+  pauseNarration?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -104,6 +106,7 @@ export function StoryBook({
   storyComplete,
   steeringWindowOpen,
   totalPages = 5,
+  pauseNarration = false,
 }: StoryBookProps) {
   // Build sorted list of page entries (1→5 order).
   const sortedPages = Array.from(pages.entries()).sort(([a], [b]) => a - b);
@@ -186,6 +189,7 @@ export function StoryBook({
               pageNumber={pageNumber}
               totalPages={totalPages}
               isActive={pageNumber === activePage}
+              isNarrationPaused={pauseNarration}
             />
           </div>
         ))}

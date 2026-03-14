@@ -89,6 +89,12 @@ _ELEMENT_REINTRO_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\bbring\s+back\b", re.IGNORECASE),
     re.compile(r"\bremember\s+the\b", re.IGNORECASE),
     re.compile(r"\bwhat\s+happened\s+to\b", re.IGNORECASE),
+    # Natural edit/override language from parents during steering windows.
+    re.compile(r"\bchange\b", re.IGNORECASE),
+    re.compile(r"\binstead\b", re.IGNORECASE),
+    re.compile(r"\bi\s+don'?t\s+want\b", re.IGNORECASE),
+    re.compile(r"\bmake\s+\w+", re.IGNORECASE),
+    re.compile(r"\bnot\b.+\bbut\b", re.IGNORECASE),
 ]
 
 _CHARACTER_INTRO_PATTERNS: list[re.Pattern[str]] = [
@@ -153,7 +159,9 @@ def classify_steering(
                 return SteeringClassification(
                     type=command_type,
                     confidence=0.9,
-                    detail=f"Matched pattern: {match.group(0)!r}",
+                    # Preserve the full utterance so apply_steering receives
+                    # the user's real instruction, not just a keyword match.
+                    detail=utterance.strip(),
                 )
 
     # --- Priority 6: ambiguous ---
