@@ -327,6 +327,7 @@ async def get_style_bible(session_id: str) -> StyleBible | None
 ### T-010 · MediaPersistenceService
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/media_persistence.py` implemented with 4 async methods. GCS sync client wrapped via `asyncio.to_thread()`. `MediaPersistenceError` added to `app/exceptions.py`. V4 signed URLs, `gs://` URI helpers. 26 mock-based tests (275 total passing). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/media_persistence.py`
 
