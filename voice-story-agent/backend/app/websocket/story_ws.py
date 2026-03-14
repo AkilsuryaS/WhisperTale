@@ -90,6 +90,7 @@ from app.dependencies import (
     get_voice_service,
 )
 from app.websocket.setup_handler import SetupHandler, SetupState
+from app.websocket.steering_handler import make_steering_handler
 from app.exceptions import (
     SessionNotFoundError,
     VoiceSessionError,
@@ -358,6 +359,8 @@ async def _page_generation_loop(
     image_svc: ImageGenerationService,
     tts_svc: TTSService,
     media_svc: MediaPersistenceService,
+    safety_svc: SafetyService | None = None,
+    voice_svc: VoiceSessionService | None = None,
     steering_window_seconds: float = _STEERING_WINDOW_SECONDS,
 ) -> None:
     """
@@ -366,8 +369,7 @@ async def _page_generation_loop(
     Sequence for each page:
       1. Fetch the current session to get the story arc and page history.
       2. Call run_page (emits page events via the WebSocket).
-      3. Open a steering window (sleep for steering_window_seconds) to allow
-         voice commands before the next page begins.
+      3. Open a steering window via SteeringHandler (replaces bare sleep).
     After all 5 pages: emit story_complete, update session status to complete.
     """
     from app.websocket.page_orchestrator import run_page
@@ -427,15 +429,32 @@ async def _page_generation_loop(
                 session_store=store,
             )
 
-            # Steering window: allow voice commands before next page
+            # Steering window between pages (not after the last page)
             if page_number < 5:
-                await ws_emit(
-                    "steering_window_open",
-                    page=page_number,
-                    duration_seconds=steering_window_seconds,
-                )
-                await asyncio.sleep(steering_window_seconds)
-                await ws_emit("steering_window_closed", page=page_number)
+                steering_handler = make_steering_handler(
+                    safety_svc=safety_svc,  # type: ignore[arg-type]
+                    story_planner=story_planner,
+                    character_bible_svc=character_bible_svc,
+                    store=store,
+                    voice_svc=voice_svc,  # type: ignore[arg-type]
+                ) if safety_svc and voice_svc else None
+
+                if steering_handler:
+                    await steering_handler.run_steering_window(
+                        session_id=session_id,
+                        page_number=page_number,
+                        emit=ws_emit,
+                        window_seconds=steering_window_seconds,
+                    )
+                else:
+                    # Fallback: bare open/sleep/close (no voice commands possible)
+                    await ws_emit(
+                        "steering_window_open",
+                        page=page_number,
+                        duration_seconds=steering_window_seconds,
+                    )
+                    await asyncio.sleep(steering_window_seconds)
+                    await ws_emit("steering_window_closed", page=page_number)
 
         # All 5 pages done — emit story_complete and update status
         await ws_emit("story_complete", session_id=session_id)
@@ -564,6 +583,8 @@ async def _turn_loop(
                                             image_svc=image_svc,
                                             tts_svc=tts_svc,
                                             media_svc=media_svc,
+                                            safety_svc=safety_svc,
+                                            voice_svc=voice_svc,
                                         )
                                     )
                             except Exception as exc:
