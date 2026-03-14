@@ -880,8 +880,11 @@ Validate that `text` word count is 60–120; if outside range, retry once with a
 ### T-023 · ImageGenerationService
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/image_generation.py` implemented with `ImagePrompt` dataclass (`text_prompt: str`, `reference_urls: list[str]`) and `ImageGenerationService.generate(prompt: ImagePrompt) -> bytes`. Uses `vertexai.preview.vision_models.ImageGenerationModel` (google-cloud-aiplatform); model loaded lazily on first call via `_ensure_initialised` (calls `vertexai.init` + `from_pretrained`). Reference images: non-empty `reference_urls` (gs:// URIs) are downloaded via `google-cloud-storage` and passed as `Image` objects to `generate_images`; empty list uses plain text-to-image. `_call_imagen` runs synchronously in `loop.run_in_executor` to avoid blocking the async event loop. Retry: 1 retry with 2 s backoff via `asyncio.sleep`; `ImageGenerationError` from safety filter propagates immediately without retry; raises `ImageGenerationError` after both attempts fail. Prompt text (without reference URLs) is logged on every attempt for Cloud Logging. `ImageGenerationError` added to `app/exceptions.py`. 22 mock-based tests (689 total passing, pre-existing integration tests excluded). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/image_generation.py`
+- `voice-story-agent/backend/app/exceptions.py` (add ImageGenerationError)
+- `voice-story-agent/backend/tests/test_t023_image_generation.py`
 
 **Description**:
 Implement `ImageGenerationService`:
