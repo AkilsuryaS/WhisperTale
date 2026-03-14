@@ -138,14 +138,16 @@ class TTSService:
         Raises any exception from the TTS client so the caller can retry.
         """
         from google.cloud import texttospeech  # type: ignore[import-not-found]
+        import html
 
         client = self._get_client()
 
-        # Wrap in SSML for natural emotional pacing; Journey voices interpret
-        # prosody tags natively and produce significantly more expressive output.
+        # XML-escape the script to avoid breaking SSML when narration contains
+        # quotes, ampersands, angle brackets, or other special characters.
+        escaped = html.escape(script, quote=False)
         ssml_script = (
             "<speak>"
-            f'<prosody rate="95%" pitch="+1st">{script}</prosody>'
+            f'<prosody rate="95%" pitch="+1st">{escaped}</prosody>'
             "</speak>"
         )
         synthesis_input = texttospeech.SynthesisInput(ssml=ssml_script)

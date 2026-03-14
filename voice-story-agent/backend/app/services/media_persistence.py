@@ -199,12 +199,13 @@ class MediaPersistenceService:
                     expiration=expiration,
                     method="GET",
                 )
-            except (AttributeError, ValueError) as exc:
+            except Exception as exc:
                 # Compute Engine / Cloud Run credentials lack a private key.
-                # Fall back to IAM-based signing.
+                # Fall back to IAM-based signing for any signing failure.
                 logger.info(
                     "MediaPersistenceService: falling back to IAM signing "
-                    "(reason: %s)",
+                    "(reason: %s: %s)",
+                    type(exc).__name__,
                     exc,
                 )
                 return _make_iam_signed_url(bucket_name, key, expiration)

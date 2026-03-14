@@ -356,7 +356,10 @@ class SetupHandler:
         )
 
         try:
-            await voice_svc.speak(session_id, question)  # type: ignore[union-attr]
+            async def _forward_audio(chunk: bytes) -> None:
+                await ws.send_bytes(chunk)
+
+            await voice_svc.speak(session_id, question, on_audio=_forward_audio)  # type: ignore[union-attr]
         except VoiceSessionError as exc:
             logger.warning(
                 "SetupHandler: speak failed for follow-up (session=%s): %s",

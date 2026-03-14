@@ -243,7 +243,10 @@ async def _begin_safety_rewrite(
     )
 
     try:
-        await voice_svc.speak(session_id, proposed_rewrite)
+        async def _forward_audio(chunk: bytes) -> None:
+            await ws.send_bytes(chunk)
+
+        await voice_svc.speak(session_id, proposed_rewrite, on_audio=_forward_audio)
     except VoiceSessionError as exc:
         logger.error(
             "speak failed during safety rewrite (session=%s): %s", session_id, exc
@@ -538,6 +541,7 @@ async def _page_generation_loop(
                     character_bible_svc=character_bible_svc,
                     store=store,
                     voice_svc=voice_svc,  # type: ignore[arg-type]
+                    ws=ws,
                 ) if safety_svc and voice_svc else None
 
                 if steering_handler:

@@ -31,7 +31,7 @@ import asyncio
 import contextlib
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, AsyncIterator, Literal
+from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Callable, Literal
 
 from google import genai
 from google.genai import types as genai_types
@@ -282,10 +282,20 @@ class VoiceSessionService:
                 cause=exc,
             ) from exc
 
-    async def speak(self, session_id: str, text: str) -> None:
+    async def speak(
+        self,
+        session_id: str,
+        text: str,
+        on_audio: Callable[[bytes], Awaitable[None]] | None = None,
+    ) -> None:
         """
         Send *text* to the Gemini Live model for TTS and wait until the agent's
         audio response has been fully delivered.
+
+        If *on_audio* is provided, each audio chunk received from the model is
+        forwarded via ``await on_audio(chunk_bytes)`` before waiting for the
+        next chunk.  This enables streaming the agent's voice to the client in
+        real time.
 
         Applies a 10 s timeout; raises VoiceSessionError if the response does
         not complete in time.
@@ -315,12 +325,22 @@ class VoiceSessionService:
                 cause=exc,
             ) from exc
 
-        # Wait for the agent to signal that its audio response is complete.
+        # Wait for the agent to signal that its audio response is complete,
+        # forwarding audio chunks to the caller as they arrive.
         async def _await_turn_complete() -> None:
             async for response in session.receive():
                 server_content = getattr(response, "server_content", None)
                 if server_content is None:
                     continue
+                # Forward audio data if present and callback supplied
+                if on_audio:
+                    parts = getattr(server_content, "model_turn", None)
+                    if parts:
+                        parts_list = getattr(parts, "parts", None) or []
+                        for part in parts_list:
+                            inline_data = getattr(part, "inline_data", None)
+                            if inline_data and getattr(inline_data, "data", None):
+                                await on_audio(inline_data.data)
                 if getattr(server_content, "turn_complete", False):
                     return
 

@@ -453,6 +453,9 @@ export function useVoiceSession(
       onAudioChunk: (pcm: ArrayBuffer) => {
         const ctx = audioContextRef.current;
         if (!ctx) return;
+        if (ctx.state === "suspended") {
+          void ctx.resume();
+        }
         // Gemini Live emits 16-bit signed little-endian PCM at 24 kHz mono.
         const int16 = new Int16Array(pcm);
         const float32 = new Float32Array(int16.length);

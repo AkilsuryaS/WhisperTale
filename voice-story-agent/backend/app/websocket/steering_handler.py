@@ -112,12 +112,14 @@ class SteeringHandler:
         character_bible_svc: CharacterBibleService | None = None,
         store: SessionStore | None = None,
         voice_svc: VoiceSessionService | None = None,
+        ws: object | None = None,
     ) -> None:
         self._safety_svc = safety_svc
         self._story_planner = story_planner
         self._character_bible_svc = character_bible_svc
         self._store = store
         self._voice_svc = voice_svc
+        self._ws = ws
 
     async def run_steering_window(
         self,
@@ -208,7 +210,11 @@ class SteeringHandler:
         # Ambiguous: ask one clarifying question, await one more turn
         if classification.type == "ambiguous":
             try:
-                await self._voice_svc.speak(session_id, _CLARIFYING_QUESTION)  # type: ignore[union-attr]
+                async def _forward_audio(chunk: bytes) -> None:
+                    if self._ws is not None:
+                        await self._ws.send_bytes(chunk)
+
+                await self._voice_svc.speak(session_id, _CLARIFYING_QUESTION, on_audio=_forward_audio)  # type: ignore[union-attr]
             except Exception as exc:
                 logger.warning(
                     "SteeringHandler: clarifying speak failed (session=%s): %s",
@@ -393,6 +399,7 @@ def make_steering_handler(
     character_bible_svc: CharacterBibleService,
     store: SessionStore,
     voice_svc: VoiceSessionService,
+    ws: object | None = None,
 ) -> SteeringHandler:
     """Construct a SteeringHandler with all dependencies injected."""
     return SteeringHandler(
@@ -401,4 +408,5 @@ def make_steering_handler(
         character_bible_svc=character_bible_svc,
         store=store,
         voice_svc=voice_svc,
+        ws=ws,
     )
