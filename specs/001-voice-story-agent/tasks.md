@@ -526,6 +526,7 @@ Wire VoiceSessionService into the WebSocket handler:
 ### T-016 · SafetyService — classifier + rewriter
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/safety_service.py` implemented with `evaluate(utterance, *, session_id="") -> SafetyResult`. Single Gemini 2.5 Flash call with `response_mime_type="application/json"` and a detailed system prompt defining permitted/forbidden content + rewrite rules. Fail-safe: any Gemini exception or malformed response returns `SafetyResult(safe=False, category=None, rewrite=SAFE_FALLBACK_REWRITE)`; original utterance never logged or passed downstream. Unknown category strings degrade to `None` gracefully. Injectable `genai.Client` for testability. TEST-S01: 30 mock-based unit tests (454 total passing, 30 integration tests deselected). TEST-S02: 30 integration tests registered under `@pytest.mark.integration` (run with `-m integration`). `pytest.ini` updated with `integration` marker. Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/safety_service.py`
 
