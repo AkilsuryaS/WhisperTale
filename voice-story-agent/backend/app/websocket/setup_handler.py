@@ -40,13 +40,14 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid as _uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import WebSocket
 
-from app.config import settings
+from app.config import settings, get_genai_client
 from app.exceptions import VoiceSessionError
 from app.models.character_bible import (
     CharacterBible,
@@ -251,14 +252,7 @@ class SetupHandler:
 
     def _get_client(self) -> object:
         if self._client is None:
-            from google import genai
-
-            project_id = settings.require_gcp("SetupHandler")
-            self._client = genai.Client(
-                vertexai=True,
-                project=project_id,
-                location=settings.GCP_REGION,
-            )
+            self._client = get_genai_client("SetupHandler")
         return self._client
 
     def _get_story_planner(self) -> object:
@@ -326,6 +320,20 @@ class SetupHandler:
 
         # ── Otherwise ask for the next missing parameter ──────────────────
         question = extracted.follow_up_question or self._default_follow_up(state)
+
+        # Emit the agent's follow-up directly over WebSocket so the frontend
+        # gets it immediately (the ADK stream may not echo speak() back when
+        # the microphone is off).
+        await _emit(
+            ws,
+            "transcript",
+            role="agent",
+            text=question,
+            is_final=True,
+            phase="setup",
+            turn_id=str(_uuid.uuid4()),
+        )
+
         try:
             await voice_svc.speak(session_id, question)  # type: ignore[union-attr]
         except VoiceSessionError as exc:
@@ -464,6 +472,17 @@ class SetupHandler:
             "story_brief_confirmed",
             brief=brief.model_dump(mode="json"),
             agent_summary=agent_summary,
+        )
+
+        # Emit a transcript so the frontend shows the confirmation
+        await _emit(
+            ws,
+            "transcript",
+            role="agent",
+            text=agent_summary,
+            is_final=True,
+            phase="setup",
+            turn_id=str(_uuid.uuid4()),
         )
 
         # Initialise full visual CharacterBible

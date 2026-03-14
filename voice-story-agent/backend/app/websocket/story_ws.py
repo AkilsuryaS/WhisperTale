@@ -916,12 +916,26 @@ async def story_websocket(
                 text = (
                     str(data.get("text", "")) if isinstance(data, dict) else ""
                 )
+                turn_id = str(uuid.uuid4())
                 synthetic_turn = VoiceTurn(
                     role="user",
                     transcript=text,
                     audio_bytes=None,
                     is_final=True,
                 )
+
+                # Echo the user's text back as a transcript event so the
+                # frontend can clear "Processing" and show the user bubble.
+                await emit(
+                    websocket,
+                    "transcript",
+                    role="user",
+                    text=text,
+                    is_final=True,
+                    phase="setup",
+                    turn_id=turn_id,
+                )
+
                 if safety_gate.awaiting_ack:
                     await _complete_safety_ack(
                         websocket, session_id, store, safety_gate
@@ -929,7 +943,6 @@ async def story_websocket(
                 else:
                     result = await safety_svc.evaluate(text, session_id=session_id)
                     if not result.safe:
-                        turn_id = str(uuid.uuid4())
                         proposed = result.rewrite or SAFE_FALLBACK_REWRITE
                         await _begin_safety_rewrite(
                             websocket,
