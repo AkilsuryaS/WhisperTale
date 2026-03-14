@@ -85,7 +85,7 @@ export function VoiceButton({
    * The button is only truly disabled (aria-disabled + visual greyed-out)
    * when generation is in progress AND the steering window is not open.
    */
-  const isDisabled = isGenerating && !steeringWindowOpen;
+  const isDisabled = isGenerating && !steeringWindowOpen && !isListening;
 
   // ── ARIA label ─────────────────────────────────────────────────────────────
 
@@ -104,6 +104,11 @@ export function VoiceButton({
 
   function handleClick() {
     if (isDisabled) return;
+    // While actively listening, a tap must always stop/submit the mic input.
+    if (isListening) {
+      onFeedback?.();
+      return;
+    }
     if (isGenerating && !steeringWindowOpen) {
       onInterrupt?.();
     } else {
