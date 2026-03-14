@@ -26,7 +26,7 @@ import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
-from app.dependencies import get_safety_service, get_store, get_voice_service
+from app.dependencies import get_safety_service, get_setup_handler, get_store, get_voice_service
 from app.exceptions import SessionNotFoundError
 from app.main import app
 from app.models.safety import SafetyResult
@@ -87,12 +87,20 @@ def _mock_safety_svc(safe: bool = True) -> MagicMock:
     return svc
 
 
+def _mock_setup_handler() -> MagicMock:
+    """Return a SetupHandler mock that no-ops (T-012 tests don't exercise routing)."""
+    handler = MagicMock()
+    handler.handle = AsyncMock()
+    return handler
+
+
 def _client(store: MagicMock, voice_svc: MagicMock | None = None) -> TestClient:
     app.dependency_overrides[get_store] = lambda: store
     app.dependency_overrides[get_voice_service] = lambda: (
         voice_svc if voice_svc is not None else _mock_voice_svc()
     )
     app.dependency_overrides[get_safety_service] = lambda: _mock_safety_svc()
+    app.dependency_overrides[get_setup_handler] = lambda: _mock_setup_handler()
     return TestClient(app, raise_server_exceptions=False)
 
 

@@ -34,6 +34,20 @@ T-017  Safety gate wired into every final user turn before pipeline routing:
               SafetyDecision(user_accepted=False) persisted; session status set
               to `error` when phase=setup.
 
+T-020  Setup parameter extraction wired into _route_user_turn:
+         _route_user_turn delegates to SetupHandler.handle() which:
+           1. Calls Gemini Flash to extract protagonist, setting, tone.
+           2. Emits `story_brief_updated` for each newly confirmed parameter.
+           3. Asks a follow-up question if parameters are still missing
+              (and fewer than MAX_SETUP_TURNS have been used).
+           4. On all-confirmed (or turn limit reached):
+              a. Persists StoryBrief.
+              b. Calls StoryPlannerService.create_arc → persists arc beats.
+              c. Emits `story_brief_confirmed`.
+              d. Calls CharacterBibleService.initialise.
+              e. Emits `character_bible_ready`.
+              f. Updates Session.status → generating.
+
 Token validation (stub):
     Any non-empty, non-whitespace token string is accepted.
     Real JWT verification is wired in a later task.
@@ -54,7 +68,13 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 
-from app.dependencies import get_safety_service, get_store, get_voice_service
+from app.dependencies import (
+    get_safety_service,
+    get_setup_handler,
+    get_store,
+    get_voice_service,
+)
+from app.websocket.setup_handler import SetupHandler, SetupState
 from app.exceptions import (
     SessionNotFoundError,
     VoiceSessionError,
@@ -278,33 +298,27 @@ async def _persist_abandoned_safety_decision(
 
 
 # ---------------------------------------------------------------------------
-# Pipeline routing stub
+# Pipeline routing
 # ---------------------------------------------------------------------------
 
 
 async def _route_user_turn(
-    ws: WebSocket, turn: VoiceTurn, session_id: str
+    ws: WebSocket,
+    turn: VoiceTurn,
+    session_id: str,
+    voice_svc: VoiceSessionService,
+    setup_handler: SetupHandler,
+    setup_state: SetupState,
+    store: SessionStore,
 ) -> None:
     """
     Route a final, safety-cleared user turn to the generation pipeline.
 
-    T-015 stub: emits `turn_detected`. Full setup/steering/narration routing
-    is wired in T-018+.
+    T-020: delegates to SetupHandler.handle() which extracts story parameters,
+    emits story_brief_updated / story_brief_confirmed / character_bible_ready,
+    and orchestrates StoryPlannerService + CharacterBibleService.
     """
-    turn_id = str(uuid.uuid4())
-    logger.info(
-        "Routing user turn (session=%s, turn_id=%s, text=%.80r)",
-        session_id,
-        turn_id,
-        turn.transcript,
-    )
-    await emit(
-        ws,
-        "turn_detected",
-        turn_id=turn_id,
-        text=turn.transcript,
-        phase="setup",
-    )
+    await setup_handler.handle(ws, turn, session_id, voice_svc, setup_state, store)
 
 
 # ---------------------------------------------------------------------------
@@ -319,6 +333,8 @@ async def _turn_loop(
     safety_svc: SafetyService,
     store: SessionStore,
     safety_gate: _SafetyGate,
+    setup_handler: SetupHandler,
+    setup_state: SetupState,
 ) -> None:
     """
     Background task: relay VoiceTurn events from the ADK stream to the client.
@@ -329,7 +345,7 @@ async def _turn_loop(
       - Final user turns:
           * If the safety gate is awaiting ack → complete the ack.
           * Otherwise: evaluate with SafetyService; if unsafe, begin a safety
-            rewrite; if safe, route normally via _route_user_turn.
+            rewrite; if safe, route to SetupHandler via _route_user_turn.
     """
     try:
         async for turn in voice_svc.stream_turns(session_id):
@@ -368,7 +384,15 @@ async def _turn_loop(
                             result.category,
                         )
                     else:
-                        await _route_user_turn(ws, turn, session_id)
+                        await _route_user_turn(
+                            ws,
+                            turn,
+                            session_id,
+                            voice_svc,
+                            setup_handler,
+                            setup_state,
+                            store,
+                        )
 
     except asyncio.CancelledError:
         logger.debug("_turn_loop cancelled (session=%s)", session_id)
@@ -398,6 +422,7 @@ async def story_websocket(
     store: SessionStore = Depends(get_store),
     voice_svc: VoiceSessionService = Depends(get_voice_service),
     safety_svc: SafetyService = Depends(get_safety_service),
+    setup_handler: SetupHandler = Depends(get_setup_handler),
 ) -> None:
     """
     Bidi-streaming WebSocket for a single story session.
@@ -428,6 +453,9 @@ async def story_websocket(
 
     # ── Per-session safety gate ───────────────────────────────────────────
     safety_gate = _SafetyGate()
+
+    # ── Per-session setup state ───────────────────────────────────────────
+    setup_state = SetupState()
 
     # ── Message dispatch loop ─────────────────────────────────────────────
     turn_loop_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
@@ -503,6 +531,8 @@ async def story_websocket(
                                 safety_svc,
                                 store,
                                 safety_gate,
+                                setup_handler,
+                                setup_state,
                             )
                         )
                     await emit(websocket, "voice_session_ready")
@@ -537,7 +567,15 @@ async def story_websocket(
                             result.category,
                         )
                     else:
-                        await _route_user_turn(websocket, synthetic_turn, session_id)
+                        await _route_user_turn(
+                            websocket,
+                            synthetic_turn,
+                            session_id,
+                            voice_svc,
+                            setup_handler,
+                            setup_state,
+                            store,
+                        )
 
             else:
                 await emit(websocket, "session_error", code="unknown_message_type")

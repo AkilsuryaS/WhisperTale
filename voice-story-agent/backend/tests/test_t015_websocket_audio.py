@@ -44,12 +44,13 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.dependencies import get_safety_service, get_store, get_voice_service
+from app.dependencies import get_safety_service, get_setup_handler, get_store, get_voice_service
 from app.exceptions import SessionNotFoundError, VoiceSessionError
 from app.main import app
 from app.models.safety import SafetyResult
 from app.models.session import Session, SessionStatus
 from app.services.adk_voice_service import VoiceTurn
+from app.websocket.setup_handler import SetupState
 from app.websocket.story_ws import _SETUP_SYSTEM_PROMPT, _route_user_turn
 
 # ---------------------------------------------------------------------------
@@ -111,10 +112,36 @@ def _mock_safety_svc() -> MagicMock:
     return svc
 
 
+def _mock_setup_handler() -> MagicMock:
+    """
+    Return a SetupHandler mock that emits `turn_detected` (T-015 stub behaviour).
+
+    This lets T-015 integration tests continue to verify audio-streaming mechanics
+    without depending on the real Gemini extraction call introduced in T-020.
+    """
+    handler = MagicMock()
+
+    async def _handle(ws, turn, session_id, voice_svc, setup_state, store):
+        import uuid as _uuid
+
+        await ws.send_json(
+            {
+                "type": "turn_detected",
+                "turn_id": str(_uuid.uuid4()),
+                "text": turn.transcript,
+                "phase": "setup",
+            }
+        )
+
+    handler.handle = _handle
+    return handler
+
+
 def _client(voice_svc: MagicMock, store: MagicMock | None = None) -> TestClient:
     app.dependency_overrides[get_store] = lambda: (store or _mock_store())
     app.dependency_overrides[get_voice_service] = lambda: voice_svc
     app.dependency_overrides[get_safety_service] = lambda: _mock_safety_svc()
+    app.dependency_overrides[get_setup_handler] = lambda: _mock_setup_handler()
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -553,48 +580,84 @@ class TestTranscriptInput:
 
 
 # ---------------------------------------------------------------------------
-# _route_user_turn unit tests (no server required)
+# _route_user_turn unit tests — verifies delegation to SetupHandler
 # ---------------------------------------------------------------------------
 
 
 class TestRouteUserTurn:
-    @pytest.mark.asyncio
-    async def test_emits_turn_detected(self):
-        ws = MagicMock()
-        ws.send_json = AsyncMock()
-        turn = VoiceTurn(role="user", transcript="hello", audio_bytes=None, is_final=True)
-        await _route_user_turn(ws, turn, SESSION_ID)
-        ws.send_json.assert_called_once()
-        payload = ws.send_json.call_args[0][0]
-        assert payload["type"] == "turn_detected"
+    """
+    _route_user_turn now delegates unconditionally to SetupHandler.handle().
+    These tests verify the delegation contract (correct args are forwarded).
+    The actual setup-phase extraction logic is covered in test_t020_setup_handler.py.
+    """
 
     @pytest.mark.asyncio
-    async def test_turn_detected_contains_text(self):
+    async def test_calls_setup_handler_handle(self):
         ws = MagicMock()
         ws.send_json = AsyncMock()
-        turn = VoiceTurn(role="user", transcript="the brave rabbit", audio_bytes=None, is_final=True)
-        await _route_user_turn(ws, turn, SESSION_ID)
-        payload = ws.send_json.call_args[0][0]
-        assert payload["text"] == "the brave rabbit"
+        turn = VoiceTurn(
+            role="user", transcript="hello", audio_bytes=None, is_final=True
+        )
+        handler = MagicMock()
+        handler.handle = AsyncMock()
+        state = SetupState()
+        store = MagicMock()
+        voice_svc = MagicMock()
+        await _route_user_turn(ws, turn, SESSION_ID, voice_svc, handler, state, store)
+        handler.handle.assert_called_once_with(
+            ws, turn, SESSION_ID, voice_svc, state, store
+        )
 
     @pytest.mark.asyncio
-    async def test_turn_detected_contains_turn_id(self):
+    async def test_passes_correct_session_id(self):
         ws = MagicMock()
         ws.send_json = AsyncMock()
-        turn = VoiceTurn(role="user", transcript="hello", audio_bytes=None, is_final=True)
-        await _route_user_turn(ws, turn, SESSION_ID)
-        payload = ws.send_json.call_args[0][0]
-        assert "turn_id" in payload
-        uuid.UUID(payload["turn_id"])
+        turn = VoiceTurn(
+            role="user", transcript="hello", audio_bytes=None, is_final=True
+        )
+        handler = MagicMock()
+        handler.handle = AsyncMock()
+        state = SetupState()
+        store = MagicMock()
+        voice_svc = MagicMock()
+        await _route_user_turn(ws, turn, SESSION_ID, voice_svc, handler, state, store)
+        _, pos_args, _ = handler.handle.mock_calls[0]
+        assert pos_args[2] == SESSION_ID
 
     @pytest.mark.asyncio
-    async def test_turn_detected_phase_setup(self):
+    async def test_passes_same_turn(self):
         ws = MagicMock()
         ws.send_json = AsyncMock()
-        turn = VoiceTurn(role="user", transcript="hello", audio_bytes=None, is_final=True)
-        await _route_user_turn(ws, turn, SESSION_ID)
-        payload = ws.send_json.call_args[0][0]
-        assert payload["phase"] == "setup"
+        turn = VoiceTurn(
+            role="user",
+            transcript="the brave rabbit",
+            audio_bytes=None,
+            is_final=True,
+        )
+        handler = MagicMock()
+        handler.handle = AsyncMock()
+        state = SetupState()
+        store = MagicMock()
+        voice_svc = MagicMock()
+        await _route_user_turn(ws, turn, SESSION_ID, voice_svc, handler, state, store)
+        _, pos_args, _ = handler.handle.mock_calls[0]
+        assert pos_args[1] is turn
+
+    @pytest.mark.asyncio
+    async def test_passes_setup_state(self):
+        ws = MagicMock()
+        ws.send_json = AsyncMock()
+        turn = VoiceTurn(
+            role="user", transcript="hello", audio_bytes=None, is_final=True
+        )
+        handler = MagicMock()
+        handler.handle = AsyncMock()
+        state = SetupState()
+        store = MagicMock()
+        voice_svc = MagicMock()
+        await _route_user_turn(ws, turn, SESSION_ID, voice_svc, handler, state, store)
+        _, pos_args, _ = handler.handle.mock_calls[0]
+        assert pos_args[4] is state
 
 
 # ---------------------------------------------------------------------------

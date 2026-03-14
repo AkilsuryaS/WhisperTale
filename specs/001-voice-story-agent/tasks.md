@@ -781,7 +781,15 @@ Returns the constructed `CharacterBible`.
 ### T-020 · WebSocket setup parameter extraction flow
 
 **Priority**: P1
+**Status**: ✅ Done — `app/websocket/setup_handler.py` implemented with `SetupState` (per-session mutable dataclass: protagonist_name, protagonist_description, setting, tone, turn_count, raw_transcripts) and `SetupHandler.handle(ws, turn, session_id, voice_svc, state, store)`. Single Gemini Flash call per turn (`_extract_params`) with `response_mime_type="application/json"` extracts story parameters from the user utterance; merges newly confirmed fields into `SetupState`; emits `story_brief_updated` for each newly confirmed parameter. If all 3 parameters (protagonist, setting, tone) are confirmed, OR `MAX_SETUP_TURNS` (3) is reached, `_complete_setup` fires: persists `StoryBrief`, calls `StoryPlannerService.create_arc` with a minimal `CharacterBible` (base exclusions only), persists arc beats via `store.update_story_arc`, emits `story_brief_confirmed` (with full brief + agent_summary), calls `CharacterBibleService.initialise` for the full visual profile, emits `character_bible_ready`, updates `Session.status = generating`. Each sub-step is individually try/except-ed so a single service failure never blocks the downstream events. Default fallback values used for missing params at turn limit (protagonist_name→"the hero", setting→"a magical land", tone→"warm"). `_extract_params` failures return empty `ExtractedParams` gracefully. `get_setup_handler()` singleton added to `app/dependencies.py`. `_route_user_turn` in `story_ws.py` updated from T-015 stub to delegate to `SetupHandler.handle`. `_turn_loop` + `story_websocket` updated to carry `setup_handler` + `SetupState`. Existing T-015/T-017/T-012 WebSocket tests updated to mock `get_setup_handler` (mock emits `turn_detected` to preserve prior test intent). 34 new mock-based tests (584 total passing, 30 integration tests deselected). Ruff clean.
 **Files**:
+- `voice-story-agent/backend/app/websocket/setup_handler.py`
+- `voice-story-agent/backend/app/websocket/story_ws.py` (extend _route_user_turn, _turn_loop, story_websocket)
+- `voice-story-agent/backend/app/dependencies.py` (add get_setup_handler)
+- `voice-story-agent/backend/tests/test_t020_setup_handler.py`
+- `voice-story-agent/backend/tests/test_t015_websocket_audio.py` (add setup_handler mock)
+- `voice-story-agent/backend/tests/test_t017_websocket_safety_gate.py` (add setup_handler mock)
+- `voice-story-agent/backend/tests/test_websocket.py` (add setup_handler mock)
 - `voice-story-agent/backend/app/websocket/story_ws.py` (extend)
 - `voice-story-agent/backend/app/websocket/setup_handler.py` (new)
 
