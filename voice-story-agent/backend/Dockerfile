@@ -4,6 +4,9 @@
 #
 # Build:  docker build -t voice-story-agent-backend .
 # Run:    docker run -p 8080:8080 --env-file .env voice-story-agent-backend
+#
+# The image exposes port 8080 and uses the PORT env-var at runtime
+# so Cloud Run can inject its own port without rebuilding.
 # ─────────────────────────────────────────────────────────────
 
 # ── Stage 1: builder ─────────────────────────────────────────
@@ -40,5 +43,14 @@ EXPOSE 8080
 
 # Unbuffered output so logs appear in Cloud Logging immediately
 ENV PYTHONUNBUFFERED=1
+
+# Liveness probe — Cloud Run and local health-checks both use /health.
+# The interval/timeout/retries below are conservative for a cold-start
+# container: wait 30 s before the first check, then every 30 s.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c \
+        "import urllib.request, sys; \
+         r = urllib.request.urlopen('http://localhost:' + __import__('os').environ.get('PORT','8080') + '/health', timeout=4); \
+         sys.exit(0 if r.status == 200 else 1)"
 
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

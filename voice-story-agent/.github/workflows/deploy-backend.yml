@@ -1,0 +1,200 @@
+# =============================================================================
+# deploy-backend.yml — CI/CD pipeline for the Voice Story Agent backend
+#
+# Triggers:
+#   • Push to the `main` branch (auto-deploy to production)
+#   • Manual trigger via workflow_dispatch (with optional image tag)
+#
+# Required GitHub repository secrets:
+#   GCP_PROJECT_ID          — GCP project ID
+#   GCP_SA_KEY              — Base-64-encoded JSON service-account key for the
+#                             Workload Identity / SA that can push images and
+#                             deploy Cloud Run services.
+#                             (Or use Workload Identity Federation — see below)
+#   GCS_BUCKET_NAME         — GCS bucket for story assets (optional override)
+#   CORS_ORIGINS            — Comma-separated allowed CORS origins (optional)
+#
+# Optional secrets (override config.py defaults):
+#   GCP_REGION              — default: us-central1
+#   GEMINI_PRO_MODEL        — default: gemini-2.5-pro
+#   GEMINI_FLASH_MODEL      — default: gemini-2.5-flash
+#   IMAGEN_MODEL            — default: imagen-3.0-generate-001
+#   GEMINI_LIVE_MODEL       — default: gemini-2.0-flash-live-001
+#   TTS_VOICE_NAME          — default: en-US-Neural2-F
+#   TTS_LANGUAGE_CODE       — default: en-US
+# =============================================================================
+
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "voice-story-agent/backend/**"
+      - "voice-story-agent/infra/cloud-run-deploy.sh"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag (default: git SHA)"
+        required: false
+        default: ""
+      region:
+        description: "GCP region (default: us-central1)"
+        required: false
+        default: "us-central1"
+
+env:
+  SERVICE_NAME: voice-story-backend
+  REGION: ${{ github.event.inputs.region || 'us-central1' }}
+
+jobs:
+  # ── Build, push, deploy ──────────────────────────────────────────────────────
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # required for Workload Identity Federation
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Authenticate to Google Cloud ───────────────────────────────────────
+      # Option A (recommended): Workload Identity Federation — no long-lived key
+      # Uncomment and configure if your project uses WIF.
+      #
+      # - name: Authenticate via Workload Identity Federation
+      #   uses: google-github-actions/auth@v2
+      #   with:
+      #     workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+      #     service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      # Option B: Service-account JSON key (simpler, set GCP_SA_KEY secret)
+      - name: Authenticate to Google Cloud (SA key)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # ── Set up Cloud SDK ───────────────────────────────────────────────────
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # ── Configure Docker to use gcloud credentials ─────────────────────────
+      - name: Configure Docker for GCR
+        run: gcloud auth configure-docker --quiet
+
+      # ── Determine image tag ────────────────────────────────────────────────
+      - name: Determine image tag
+        id: tag
+        run: |
+          TAG="${{ github.event.inputs.image_tag }}"
+          if [[ -z "${TAG}" ]]; then
+            TAG="${{ github.sha }}"
+          fi
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "image=gcr.io/${{ secrets.GCP_PROJECT_ID }}/${SERVICE_NAME}:${TAG}" >> "${GITHUB_OUTPUT}"
+
+      # ── Step 1: Build image ────────────────────────────────────────────────
+      - name: Build Docker image
+        run: |
+          docker build \
+            --tag "${{ steps.tag.outputs.image }}" \
+            --tag "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${SERVICE_NAME}:latest" \
+            --file voice-story-agent/backend/Dockerfile \
+            voice-story-agent/backend
+
+      # ── Step 2: Push image ─────────────────────────────────────────────────
+      - name: Push Docker image
+        run: |
+          docker push "${{ steps.tag.outputs.image }}"
+          docker push "gcr.io/${{ secrets.GCP_PROJECT_ID }}/${SERVICE_NAME}:latest"
+
+      # ── Step 3: Deploy to Cloud Run ────────────────────────────────────────
+      - name: Deploy to Cloud Run
+        id: deploy
+        run: |
+          SA_EMAIL="voice-story-agent-sa@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+          GCS_BUCKET="${{ secrets.GCS_BUCKET_NAME || format('{0}-story-assets', secrets.GCP_PROJECT_ID) }}"
+          CORS="${{ secrets.CORS_ORIGINS }}"
+          EXTRA_ENV=""
+          if [[ -n "${CORS}" ]]; then
+            EXTRA_ENV=",CORS_ORIGINS=${CORS}"
+          fi
+
+          gcloud run deploy "${SERVICE_NAME}" \
+            --image="${{ steps.tag.outputs.image }}" \
+            --region="${REGION}" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --service-account="${SA_EMAIL}" \
+            --set-env-vars="\
+          GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},\
+          GCP_REGION=${{ secrets.GCP_REGION || env.REGION }},\
+          GCS_BUCKET_NAME=${GCS_BUCKET},\
+          FIRESTORE_DATABASE=(default),\
+          GEMINI_PRO_MODEL=${{ secrets.GEMINI_PRO_MODEL || 'gemini-2.5-pro' }},\
+          GEMINI_FLASH_MODEL=${{ secrets.GEMINI_FLASH_MODEL || 'gemini-2.5-flash' }},\
+          IMAGEN_MODEL=${{ secrets.IMAGEN_MODEL || 'imagen-3.0-generate-001' }},\
+          GEMINI_LIVE_MODEL=${{ secrets.GEMINI_LIVE_MODEL || 'gemini-2.0-flash-live-001' }},\
+          TTS_VOICE_NAME=${{ secrets.TTS_VOICE_NAME || 'en-US-Neural2-F' }},\
+          TTS_LANGUAGE_CODE=${{ secrets.TTS_LANGUAGE_CODE || 'en-US' }},\
+          ADK_AGENT_NAME=voice-story-agent,\
+          PYTHONUNBUFFERED=1${EXTRA_ENV}" \
+            --min-instances=0 \
+            --max-instances=10 \
+            --memory=512Mi \
+            --cpu=1 \
+            --timeout=300 \
+            --concurrency=80 \
+            --port=8080 \
+            --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --quiet
+
+      # ── Step 4: Print the service URL ──────────────────────────────────────
+      - name: Get service URL
+        id: url
+        run: |
+          URL=$(gcloud run services describe "${SERVICE_NAME}" \
+            --region="${REGION}" \
+            --project="${{ secrets.GCP_PROJECT_ID }}" \
+            --format="value(status.url)")
+          echo "url=${URL}" >> "${GITHUB_OUTPUT}"
+          echo "### Deployed: ${URL}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Health: \`${URL}/health\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- WebSocket: \`wss://${URL#https://}/ws/story/{session_id}\`" >> "${GITHUB_STEP_SUMMARY}"
+
+      # ── Health-check smoke test ────────────────────────────────────────────
+      - name: Smoke test — GET /health
+        run: |
+          URL="${{ steps.url.outputs.url }}"
+          echo "Checking ${URL}/health …"
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl --silent --output /dev/null --write-out "%{http_code}" "${URL}/health" || echo "000")
+            if [[ "${STATUS}" == "200" ]]; then
+              echo "✅  /health returned 200"
+              exit 0
+            fi
+            echo "Attempt ${i}: got ${STATUS}, retrying in 5 s…"
+            sleep 5
+          done
+          echo "❌  /health did not return 200 after 5 attempts"
+          exit 1
+
+  # ── Notify on failure ────────────────────────────────────────────────────────
+  notify-failure:
+    name: Notify on failure
+    needs: deploy
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow failed
+        run: |
+          echo "::error::Backend deploy workflow failed. Check the deploy job logs."
+          exit 1
