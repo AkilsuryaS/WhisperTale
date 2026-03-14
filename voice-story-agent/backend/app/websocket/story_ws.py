@@ -129,6 +129,34 @@ _STEERING_WINDOW_SECONDS = 10
 
 
 # ---------------------------------------------------------------------------
+# Page-loop shared state (T-031)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _PageLoopState:
+    """
+    Shared mutable state between the page-generation loop background task and
+    the WebSocket message-dispatch loop.
+
+    interrupt_event:     Set by the ``interrupt`` client message to signal the
+                         page loop that the client wants to enter the steering
+                         window immediately (cancels the current narration wait).
+    steering_turn_queue: asyncio.Queue filled by ``voice_feedback`` client
+                         messages; consumed by SteeringHandler.run_steering_window
+                         as the source of synthetic user turns.
+    in_steering_window:  True while a steering window is active; guards against
+                         duplicate ``interrupt`` handling.
+    """
+
+    interrupt_event: asyncio.Event = field(default_factory=asyncio.Event)
+    steering_turn_queue: asyncio.Queue = field(  # type: ignore[type-arg]
+        default_factory=asyncio.Queue
+    )
+    in_steering_window: bool = False
+
+
+# ---------------------------------------------------------------------------
 # Emit helper
 # ---------------------------------------------------------------------------
 
@@ -362,6 +390,7 @@ async def _page_generation_loop(
     safety_svc: SafetyService | None = None,
     voice_svc: VoiceSessionService | None = None,
     steering_window_seconds: float = _STEERING_WINDOW_SECONDS,
+    page_loop_state: _PageLoopState | None = None,
 ) -> None:
     """
     Run the full 5-page story generation loop after setup is complete.
@@ -369,10 +398,16 @@ async def _page_generation_loop(
     Sequence for each page:
       1. Fetch the current session to get the story arc and page history.
       2. Call run_page (emits page events via the WebSocket).
-      3. Open a steering window via SteeringHandler (replaces bare sleep).
+         If ``page_loop_state.interrupt_event`` is set mid-narration, skip
+         directly to the steering window (T-031).
+      3. Open a steering window via SteeringHandler, passing the shared
+         ``steering_turn_queue`` so voice_feedback messages reach it.
     After all 5 pages: emit story_complete, update session status to complete.
     """
     from app.websocket.page_orchestrator import run_page
+
+    # Ensure we have a state object (may be None when called from tests or REST)
+    loop_state = page_loop_state or _PageLoopState()
 
     async def ws_emit(event_type: str, **fields: object) -> None:
         try:
@@ -415,22 +450,56 @@ async def _page_generation_loop(
                     summary = sentences[0].strip() + "." if sentences else pg.text
                     page_history.append(summary)
 
-            await run_page(
-                session_id=session_id,
-                page_number=page_number,
-                beat=beat,
-                page_history=page_history,
-                emit=ws_emit,
-                story_planner=story_planner,
-                character_bible_svc=character_bible_svc,
-                image_svc=image_svc,
-                tts_svc=tts_svc,
-                media_svc=media_svc,
-                session_store=store,
+            # T-031: clear interrupt flag before starting page narration
+            loop_state.interrupt_event.clear()
+            loop_state.in_steering_window = False
+
+            # Run page generation; interrupt_event allows early exit to steering
+            page_task = asyncio.ensure_future(
+                run_page(
+                    session_id=session_id,
+                    page_number=page_number,
+                    beat=beat,
+                    page_history=page_history,
+                    emit=ws_emit,
+                    story_planner=story_planner,
+                    character_bible_svc=character_bible_svc,
+                    image_svc=image_svc,
+                    tts_svc=tts_svc,
+                    media_svc=media_svc,
+                    session_store=store,
+                )
             )
+
+            interrupt_task = asyncio.ensure_future(
+                loop_state.interrupt_event.wait()
+            )
+
+            done, pending = await asyncio.wait(
+                {page_task, interrupt_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            # Cancel whichever task didn't finish first
+            for t in pending:
+                t.cancel()
+                try:
+                    await t
+                except (asyncio.CancelledError, Exception):
+                    pass
+
+            if interrupt_task in done:
+                # Client sent interrupt — jump directly to steering window
+                logger.info(
+                    "_page_generation_loop: interrupt received mid-narration "
+                    "(session=%s, page=%d)",
+                    session_id,
+                    page_number,
+                )
 
             # Steering window between pages (not after the last page)
             if page_number < 5:
+                loop_state.in_steering_window = True
                 steering_handler = make_steering_handler(
                     safety_svc=safety_svc,  # type: ignore[arg-type]
                     story_planner=story_planner,
@@ -445,6 +514,7 @@ async def _page_generation_loop(
                         page_number=page_number,
                         emit=ws_emit,
                         window_seconds=steering_window_seconds,
+                        turn_queue=loop_state.steering_turn_queue,
                     )
                 else:
                     # Fallback: bare open/sleep/close (no voice commands possible)
@@ -455,6 +525,8 @@ async def _page_generation_loop(
                     )
                     await asyncio.sleep(steering_window_seconds)
                     await ws_emit("steering_window_closed", page=page_number)
+
+                loop_state.in_steering_window = False
 
         # All 5 pages done — emit story_complete and update status
         await ws_emit("story_complete", session_id=session_id)
@@ -501,6 +573,7 @@ async def _turn_loop(
     image_svc: ImageGenerationService,
     tts_svc: TTSService,
     media_svc: MediaPersistenceService,
+    page_loop_state: _PageLoopState | None = None,
 ) -> None:
     """
     Background task: relay VoiceTurn events from the ADK stream to the client.
@@ -585,6 +658,7 @@ async def _turn_loop(
                                             media_svc=media_svc,
                                             safety_svc=safety_svc,
                                             voice_svc=voice_svc,
+                                            page_loop_state=page_loop_state,
                                         )
                                     )
                             except Exception as exc:
@@ -669,6 +743,9 @@ async def story_websocket(
     # ── Per-session setup state ───────────────────────────────────────────
     setup_state = SetupState()
 
+    # ── Per-session page-loop state (T-031) ───────────────────────────────
+    page_loop_state = _PageLoopState()
+
     # ── Message dispatch loop ─────────────────────────────────────────────
     turn_loop_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
 
@@ -750,6 +827,7 @@ async def story_websocket(
                                 image_svc,
                                 tts_svc,
                                 media_svc,
+                                page_loop_state=page_loop_state,
                             )
                         )
                     await emit(websocket, "voice_session_ready")
@@ -770,6 +848,65 @@ async def story_websocket(
                     )
                 else:
                     result = await safety_svc.evaluate(text, session_id=session_id)
+                    if not result.safe:
+                        turn_id = str(uuid.uuid4())
+                        proposed = result.rewrite or SAFE_FALLBACK_REWRITE
+                        await _begin_safety_rewrite(
+                            websocket,
+                            synthetic_turn,
+                            turn_id,
+                            session_id,
+                            voice_svc,
+                            safety_gate,
+                            proposed,
+                            result.category,
+                        )
+                    else:
+                        await _route_user_turn(
+                            websocket,
+                            synthetic_turn,
+                            session_id,
+                            voice_svc,
+                            setup_handler,
+                            setup_state,
+                            store,
+                        )
+
+            elif msg_type == "interrupt":
+                # T-031: client interrupts mid-narration to enter steering window
+                if not page_loop_state.in_steering_window:
+                    page_loop_state.interrupt_event.set()
+                    logger.info(
+                        "WS interrupt received (session=%s)", session_id
+                    )
+                else:
+                    logger.debug(
+                        "WS interrupt ignored — already in steering window "
+                        "(session=%s)",
+                        session_id,
+                    )
+
+            elif msg_type == "voice_feedback":
+                # T-031: non-audio client injects a transcript directly into the
+                # active steering window's turn queue.
+                raw_transcript = (
+                    str(data.get("raw_transcript", ""))
+                    if isinstance(data, dict)
+                    else ""
+                )
+                synthetic_turn = VoiceTurn(
+                    role="user",
+                    transcript=raw_transcript,
+                    audio_bytes=None,
+                    is_final=True,
+                )
+                if page_loop_state.in_steering_window:
+                    await page_loop_state.steering_turn_queue.put(synthetic_turn)
+                else:
+                    # Outside steering window: run safety + route as transcript_input
+                    result = await safety_svc.evaluate(
+                        raw_transcript, session_id=session_id
+                    )
                     if not result.safe:
                         turn_id = str(uuid.uuid4())
                         proposed = result.rewrite or SAFE_FALLBACK_REWRITE
