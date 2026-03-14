@@ -747,8 +747,11 @@ Return the `beats` list. Raise `StoryPlannerError` on API failure.
 ### T-019 · CharacterBibleService — initialise
 
 **Priority**: P1
+**Status**: ✅ Done — `app/services/character_bible_service.py` implemented with `initialise(session_id: str, brief: StoryBrief) -> CharacterBible`. Single Gemini 2.5 Flash call with `response_mime_type="application/json"` derives `ProtagonistProfile` fields (species_or_type, color, attire, notable_traits 2–4 items) and `StyleBible` fields (art_style, color_palette, mood, negative_style_terms) from `brief.protagonist_description` and `brief.tone`. `protagonist.name` always taken from `brief.protagonist_name` (never from Gemini). `ContentPolicy` hardcoded with 6 `BASE_EXCLUSIONS`. `_parse_bible_data` validates response structure and delegates to Pydantic for field constraints. `CharacterBible` + `StyleBible` persisted atomically via `SessionStore.save_character_bible`. Three distinct error phases (Gemini call, JSON parse, persistence) each raise `CharacterBibleServiceError` with the original exception as `cause`. Injectable `genai.Client` and `SessionStore` for testability. `CharacterBibleServiceError` added to `app/exceptions.py`. 33 mock-based tests (550 total passing, 30 integration tests deselected). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/character_bible_service.py`
+- `voice-story-agent/backend/app/exceptions.py` (add CharacterBibleServiceError)
+- `voice-story-agent/backend/tests/test_t019_character_bible_service.py`
 
 **Description**:
 Implement:
