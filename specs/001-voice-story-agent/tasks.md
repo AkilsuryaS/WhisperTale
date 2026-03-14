@@ -817,8 +817,10 @@ If the user provides all 3 parameters in the first utterance (e.g., parent gives
 ### T-021 · REST: POST /sessions/{id}/voice-session + character-bible/generate
 
 **Priority**: P1
+**Status**: ✅ Done — `app/routers/sessions.py` extended with two new endpoints. `POST /sessions/{session_id}/voice-session` validates session exists and is in `setup` status (409 otherwise), calls `VoiceSessionService.start` with a children's story system prompt, and returns `{session_id, ready: True, voice_model}`; raises 502 on Gemini Live failure. `POST /sessions/{session_id}/character-bible/generate` validates session is in `generating` status and StoryBrief is confirmed (409 otherwise), calls `CharacterBibleService.initialise(session_id, brief)`, and returns the full `CharacterBible` JSON; raises 502 on service failure. Both return 404 for unknown session IDs. All imports moved to module top-level for clean patchability. 17 mock-based tests (595 total passing, pre-existing integration tests excluded). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/routers/sessions.py` (extend)
+- `voice-story-agent/backend/tests/test_t021_voice_session_and_character_bible.py`
 
 **Description**:
 Implement:
