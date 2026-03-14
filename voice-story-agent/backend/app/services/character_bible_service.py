@@ -54,6 +54,7 @@ from app.models.character_bible import (
     StyleBible,
 )
 from app.models.session import StoryBrief
+from app.services.image_generation import ImagePrompt
 from app.services.session_store import SessionStore
 
 logger = logging.getLogger(__name__)
@@ -312,3 +313,94 @@ class CharacterBibleService:
             brief.protagonist_name,
         )
         return bible
+
+    def build_image_prompt(
+        self, bible: CharacterBible, page_text: str, page_number: int
+    ) -> ImagePrompt:
+        """
+        Build an ImagePrompt for Imagen from the CharacterBible and page text.
+
+        Incorporates:
+        - Protagonist visual description (species, color, attire, notable_traits)
+        - Style bible art style, color palette, and mood
+        - Content policy exclusions as negative constraints
+        - Reference image URI from protagonist (if available, i.e. page > 1)
+
+        Args:
+            bible:       The session's CharacterBible.
+            page_text:   The display text for the page (60–120 words).
+            page_number: The current page number (1–5).
+
+        Returns:
+            An ImagePrompt ready to pass to ImageGenerationService.generate.
+        """
+        p = bible.protagonist
+        sb = bible.style_bible
+
+        # Build protagonist description block
+        attire_clause = f", wearing {p.attire}" if p.attire else ""
+        traits_clause = ", ".join(p.notable_traits) if p.notable_traits else ""
+        protagonist_desc = (
+            f"a {p.color} {p.species_or_type} named {p.name}"
+            f"{attire_clause}"
+            + (f" with {traits_clause}" if traits_clause else "")
+        )
+
+        # Negative constraints from content policy
+        negatives = (
+            ", ".join(bible.content_policy.exclusions)
+            if bible.content_policy.exclusions
+            else "no inappropriate content"
+        )
+
+        text_prompt = (
+            f"{sb.art_style} illustration for a children's bedtime story. "
+            f"Scene: {page_text.strip()} "
+            f"Main character: {protagonist_desc}. "
+            f"Art style: {sb.art_style}, color palette: {sb.color_palette}, "
+            f"mood: {sb.mood}. "
+            f"Avoid: {negatives}, {', '.join(sb.negative_style_terms)}."
+        )
+
+        # Include reference image for consistency on pages 2+
+        reference_urls: list[str] = []
+        if page_number > 1 and p.reference_image_gcs_uri:
+            reference_urls = [p.reference_image_gcs_uri]
+
+        return ImagePrompt(text_prompt=text_prompt, reference_urls=reference_urls)
+
+    async def set_reference_image(
+        self, session_id: str, gcs_uri: str
+    ) -> None:
+        """
+        Persist the page-1 illustration GCS URI as the protagonist reference image.
+
+        Updates `protagonist.reference_image_gcs_uri` in Firestore and in the
+        local CharacterBible document so subsequent build_image_prompt calls
+        can include it.
+
+        Args:
+            session_id: The session whose CharacterBible to update.
+            gcs_uri:    The gs:// URI of the page-1 illustration.
+        """
+        try:
+            await self._get_store().update_character_bible_field(
+                session_id, "protagonist.reference_image_gcs_uri", gcs_uri
+            )
+        except Exception as exc:
+            logger.error(
+                "CharacterBibleService: failed to set reference image "
+                "(session=%s, error_type=%s)",
+                session_id,
+                type(exc).__name__,
+            )
+            raise CharacterBibleServiceError(
+                "Failed to persist protagonist reference image URI",
+                cause=exc,
+            ) from exc
+
+        logger.info(
+            "CharacterBibleService: reference image set (session=%s, uri=%s)",
+            session_id,
+            gcs_uri,
+        )
