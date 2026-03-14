@@ -22,10 +22,9 @@
 
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useVoiceSession } from "@/hooks/useVoiceSession";
 import { useStoryState } from "@/hooks/useStoryState";
-import { WsClient } from "@/lib/wsClient";
 import type {
   SafetyRewriteEvent,
   SafetyAcceptedEvent,
@@ -36,20 +35,6 @@ import { CaptionBar } from "@/components/CaptionBar";
 import { VoiceButton } from "@/components/VoiceButton";
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const API_BASE =
-  typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000")
-    : "http://localhost:8000";
-
-const WS_BASE =
-  typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_WS_BASE_URL ?? "ws://localhost:8000")
-    : "ws://localhost:8000";
-
-// ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
 
@@ -57,12 +42,8 @@ export default function StoryAppPage() {
   // ── Voice session lifecycle ─────────────────────────────────────────────
   const voice = useVoiceSession();
 
-  // ── WsClient ref — created once per session, passed to useStoryState ────
-  const wsClientRef = useRef<WsClient | null>(null);
-  const [wsClient, setWsClient] = useState<WsClient | null>(null);
-
-  // ── Story state accumulated from WS events ──────────────────────────────
-  const story = useStoryState(wsClient);
+  // ── Story state driven by the single WsClient owned by useVoiceSession ──
+  const story = useStoryState(voice.wsClient);
 
   // ── Generation / completion state ───────────────────────────────────────
   const [isGenerating, setIsGenerating] = useState(false);
@@ -72,43 +53,10 @@ export default function StoryAppPage() {
   const [safetyRewrite, setSafetyRewrite] = useState<SafetyRewriteEvent | null>(null);
   const [safetyAccepted, setSafetyAccepted] = useState<SafetyAcceptedEvent | null>(null);
 
-  // ── Reconnect recovery guard ─────────────────────────────────────────────
-  const hasConnectedOnceRef = useRef(false);
-
-  // ── Hydrate session after reconnect ─────────────────────────────────────
-  const hydrateSession = useCallback(
-    async (sessionId: string) => {
-      try {
-        const res = await fetch(`${API_BASE}/sessions/${sessionId}`);
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          session_id: string;
-          pages?: Array<{
-            page_number: number;
-            status: string;
-            text?: string | null;
-            illustration_failed?: boolean;
-            audio_failed?: boolean;
-          }> | null;
-        };
-        story.hydrate(data);
-      } catch {
-        // Reconnect hydration is best-effort; swallow errors
-      }
-    },
-    [story]
-  );
-
-  // ── Build and wire up a WsClient when the session is established ─────────
+  // ── Subscribe to page generation / safety / reconnect events ────────────
   useEffect(() => {
-    if (!voice.sessionId) {
-      // Session stopped or not yet started — tear down any existing client
-      if (wsClientRef.current) {
-        wsClientRef.current.disconnect();
-        wsClientRef.current = null;
-        setWsClient(null);
-      }
-      hasConnectedOnceRef.current = false;
+    const client = voice.wsClient;
+    if (!client) {
       setIsGenerating(false);
       setStoryComplete(false);
       setSafetyRewrite(null);
@@ -116,16 +64,6 @@ export default function StoryAppPage() {
       return;
     }
 
-    // Avoid re-creating if already have a client for this session
-    if (wsClientRef.current) return;
-
-    const client = new WsClient({
-      wsBaseUrl: WS_BASE,
-      sessionId: voice.sessionId,
-      token: "",
-    });
-
-    // Page generation tracking
     client.on("page_generating", (_evt: PageGeneratingEvent) => {
       setIsGenerating(true);
     });
@@ -136,8 +74,6 @@ export default function StoryAppPage() {
       setStoryComplete(true);
       setIsGenerating(false);
     });
-
-    // Safety events
     client.on("safety_rewrite", (evt: SafetyRewriteEvent) => {
       setSafetyRewrite(evt);
       setSafetyAccepted(null);
@@ -145,40 +81,32 @@ export default function StoryAppPage() {
     client.on("safety_accepted", (evt: SafetyAcceptedEvent) => {
       setSafetyAccepted(evt);
     });
-
-    // Reconnect recovery: second+ connected event means we rejoined mid-session
-    client.on("connected", () => {
-      if (hasConnectedOnceRef.current && voice.sessionId) {
-        hydrateSession(voice.sessionId);
-      } else {
-        hasConnectedOnceRef.current = true;
-      }
-    });
-
-    wsClientRef.current = client;
-    setWsClient(client);
-    client.connect();
-
-    return () => {
-      // cleanup handled via voice.sessionId becoming null (above branch)
-    };
-  }, [voice.sessionId, hydrateSession]);
+  }, [voice.wsClient]);
 
   // ── Interrupt / feedback handlers ────────────────────────────────────────
   const handleInterrupt = useCallback(() => {
-    if (voice.sessionId && wsClientRef.current) {
-      wsClientRef.current.send({
+    if (voice.sessionId && voice.wsClient) {
+      voice.wsClient.send({
         type: "interrupt",
         page_number: story.steeringWindowPage ?? 1,
       });
     }
-  }, [voice.sessionId, story.steeringWindowPage]);
+  }, [voice.sessionId, voice.wsClient, story.steeringWindowPage]);
 
   const handleFeedback = useCallback(() => {
-    if (!voice.isListening) {
+    if (!voice.sessionId) {
+      // No session yet — start one (also starts the mic)
       voice.startSession().catch(() => { /* error shown in UI */ });
+    } else if (voice.isListening) {
+      // Mic is running — stop it so the backend knows we're done speaking
+      // Keep the WebSocket open so story events can stream back
+      voice.stopMic();
     } else {
+      // Session exists but mic is off — full reset then restart
       voice.stopSession();
+      setTimeout(() => {
+        voice.startSession().catch(() => { /* error shown in UI */ });
+      }, 200);
     }
   }, [voice]);
 

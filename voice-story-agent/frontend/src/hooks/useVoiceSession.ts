@@ -97,9 +97,13 @@ export interface UseVoiceSessionReturn {
   isReconnecting: boolean;
   /** Number of reconnect attempts made (0 = no reconnect attempted). */
   reconnectAttempt: number;
+  /** The active WsClient for this session (null before startSession succeeds). */
+  wsClient: WsClient | null;
   /** Start the session: creates session, reserves ADK slot, connects WS, starts mic. */
   startSession: () => Promise<void>;
-  /** Stop streaming and disconnect cleanly. */
+  /** Stop only the microphone — keeps WebSocket open so story events can still arrive. */
+  stopMic: () => void;
+  /** Stop streaming and disconnect cleanly (full teardown). */
   stopSession: () => void;
 }
 
@@ -153,6 +157,7 @@ export function useVoiceSession(
   const [error, setError] = useState<VoiceSessionError | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [wsClient, setWsClientState] = useState<WsClient | null>(null);
 
   const wsClientRef = useRef<WsClient | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -323,6 +328,7 @@ export function useVoiceSession(
 
     wsClientRef.current = client;
     client.connect();
+    setWsClientState(client);
 
     if (stoppedRef.current) {
       client.disconnect();
@@ -385,6 +391,14 @@ export function useVoiceSession(
   }, [resolveFetch, _mediaDevices, _wsClientFactory, _MediaRecorder, stopStreaming, _doReconnectHydrate]);
 
   // ---------------------------------------------------------------------------
+  // stopMic — stop only the microphone, keep WebSocket open
+  // ---------------------------------------------------------------------------
+
+  const stopMic = useCallback(() => {
+    stopStreaming();
+  }, [stopStreaming]);
+
+  // ---------------------------------------------------------------------------
   // stopSession
   // ---------------------------------------------------------------------------
 
@@ -399,6 +413,7 @@ export function useVoiceSession(
     setError(null);
     setIsReconnecting(false);
     setReconnectAttempt(0);
+    setWsClientState(null);
   }, [disconnect]);
 
   // ---------------------------------------------------------------------------
@@ -419,7 +434,9 @@ export function useVoiceSession(
     error,
     isReconnecting,
     reconnectAttempt,
+    wsClient,
     startSession,
+    stopMic,
     stopSession,
   };
 }
