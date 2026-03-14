@@ -358,6 +358,21 @@ class SteeringHandler:
                     exc,
                 )
 
+        # Tone change: update StyleBible.mood for carry-forward (T-033)
+        if command_type == CommandType.tone_change:
+            try:
+                await self._character_bible_svc.update_mood(  # type: ignore[union-attr]
+                    session_id,
+                    new_mood=interpreted_intent,
+                    command_id=command.command_id,
+                )
+            except Exception as exc:
+                logger.error(
+                    "SteeringHandler: update_mood failed (session=%s): %s",
+                    session_id,
+                    exc,
+                )
+
         # Emit voice_command_applied
         await emit(
             "voice_command_applied",

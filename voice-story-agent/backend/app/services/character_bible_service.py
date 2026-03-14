@@ -41,6 +41,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any, Optional
+from uuid import UUID
 
 from google import genai
 from google.genai import types as genai_types
@@ -484,4 +485,71 @@ class CharacterBibleService:
             session_id,
             char_ref.char_id,
             char_ref.name,
+        )
+
+    async def update_mood(
+        self,
+        session_id: str,
+        new_mood: str,
+        command_id: UUID | None = None,
+    ) -> None:
+        """
+        Update StyleBible.mood (and last_updated_by_command_id) for a session.
+
+        Called when a ``tone_change`` VoiceCommand is accepted (T-033).
+
+        Steps:
+            1. Fetch the current CharacterBible from Firestore.
+            2. Update ``style_bible.mood`` and ``style_bible.last_updated_by_command_id``.
+            3. Persist both the standalone StyleBible document and the embedded
+               ``style_bible`` field in the CharacterBible document atomically.
+
+        Args:
+            session_id:  The session whose StyleBible to update.
+            new_mood:    The new mood string from the tone_change command.
+            command_id:  The VoiceCommand.command_id that triggered the change
+                         (stored in ``last_updated_by_command_id`` for auditability).
+
+        Raises:
+            CharacterBibleServiceError: on Firestore read or write failure.
+        """
+        try:
+            store = self._get_store()
+            bible = await store.get_character_bible(session_id)
+            if bible is None:
+                raise CharacterBibleServiceError(
+                    f"CharacterBible not found for session {session_id}",
+                    cause=None,
+                )
+            updated_style = StyleBible(
+                art_style=bible.style_bible.art_style,
+                color_palette=bible.style_bible.color_palette,
+                mood=new_mood,
+                negative_style_terms=list(bible.style_bible.negative_style_terms),
+                last_updated_by_command_id=command_id,
+            )
+            # Persist standalone StyleBible document
+            await store.save_style_bible(session_id, updated_style)
+            # Sync embedded style_bible in CharacterBible document
+            await store.update_character_bible_field(
+                session_id, "style_bible", updated_style.model_dump(mode="json")
+            )
+        except CharacterBibleServiceError:
+            raise
+        except Exception as exc:
+            logger.error(
+                "CharacterBibleService: update_mood failed "
+                "(session=%s, error_type=%s)",
+                session_id,
+                type(exc).__name__,
+            )
+            raise CharacterBibleServiceError(
+                "Failed to update StyleBible.mood",
+                cause=exc,
+            ) from exc
+
+        logger.info(
+            "CharacterBibleService: mood updated (session=%s, mood=%s)",
+            session_id,
+            new_mood,
         )
