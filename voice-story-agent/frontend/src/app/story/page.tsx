@@ -8,6 +8,15 @@
  *   - CaptionBar       → scrolling transcript strip
  *   - VoiceButton      → accessible mic toggle
  *
+ * Bottom-bar behaviour
+ * --------------------
+ * While story pages are visible the bottom bar (CaptionBar + large VoiceButton)
+ * is collapsed out of the way so the full story card is unobstructed.  Only a
+ * small floating mic FAB stays visible in the bottom-right corner.
+ *
+ * Tapping the FAB (or the large button during setup) expands the bar.  The bar
+ * auto-collapses again once isListening and isProcessing both return to false.
+ *
  * Reconnect recovery
  * ------------------
  * When the WebSocket reconnects (connected event fires after the first time),
@@ -37,6 +46,25 @@ import type { PartialCaption } from "@/components/CaptionBar";
 import { VoiceButton } from "@/components/VoiceButton";
 
 // ---------------------------------------------------------------------------
+// Small mic icon — used by the floating FAB in reading mode
+// ---------------------------------------------------------------------------
+
+function SmallMicIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      className="h-6 w-6"
+    >
+      <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4Z" />
+      <path d="M19 10a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7 7 0 0 0 6 6.93V19H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2h-2v-2.07A7 7 0 0 0 19 10Z" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page component
 // ---------------------------------------------------------------------------
 
@@ -61,6 +89,25 @@ export default function StoryAppPage() {
   // ── Safety state ────────────────────────────────────────────────────────
   const [safetyRewrite, setSafetyRewrite] = useState<SafetyRewriteEvent | null>(null);
   const [safetyAccepted, setSafetyAccepted] = useState<SafetyAcceptedEvent | null>(null);
+
+  // ── Bottom-bar expanded/collapsed state ─────────────────────────────────
+  // true  → full CaptionBar + large VoiceButton visible
+  // false → bar hidden; only small FAB shown (reading mode, pages present)
+  const [barExpanded, setBarExpanded] = useState(true);
+
+  // Auto-collapse the bar once the user stops speaking and pages are visible.
+  useEffect(() => {
+    if (!voice.isListening && !isProcessing && story.pages.size > 0) {
+      setBarExpanded(false);
+    }
+  }, [voice.isListening, isProcessing, story.pages.size]);
+
+  // Keep the bar open while there are no pages yet (setup phase).
+  useEffect(() => {
+    if (story.pages.size === 0) {
+      setBarExpanded(true);
+    }
+  }, [story.pages.size]);
 
   // ── Subscribe to page generation / safety / reconnect events ────────────
   useEffect(() => {
@@ -113,7 +160,8 @@ export default function StoryAppPage() {
   }, [voice.sessionId, voice.wsClient, story.steeringWindowPage]);
 
   const handleFeedback = useCallback(() => {
-    // Unlock autoplay on the first gesture.
+    // Expand the bottom bar and unlock autoplay on every mic tap.
+    setBarExpanded(true);
     if (audioUnlockRef.current) {
       audioUnlockRef.current.play().catch(() => {});
       audioUnlockRef.current.pause();
@@ -171,6 +219,9 @@ export default function StoryAppPage() {
     return null;
   })();
 
+  // Whether the full bottom bar should actually be rendered (not slid away).
+  const showFullBar = barExpanded || story.pages.size === 0;
+
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <main
@@ -202,7 +253,6 @@ export default function StoryAppPage() {
           {statusMessage.sub && (
             <p className="text-base text-purple-500 max-w-sm">{statusMessage.sub}</p>
           )}
-          {/* Animated dots when listening, processing, or generating */}
           {(voice.isListening || isProcessing || isGenerating) && (
             <div className="flex gap-2 mt-2">
               {[0, 1, 2].map((i) => (
@@ -217,17 +267,27 @@ export default function StoryAppPage() {
         </div>
       )}
 
-      {/* Listening pulse ring around mic when active */}
-      {voice.isListening && (
-        <div className="absolute bottom-4 left-1/2 z-20 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
-          <span className="text-xs font-medium text-purple-600 tracking-wide uppercase animate-pulse">
+      {/* Listening label — shown while mic is active and pages exist */}
+      {voice.isListening && story.pages.size > 0 && (
+        <div className="absolute top-3 left-1/2 z-20 -translate-x-1/2 pointer-events-none">
+          <span className="text-xs font-medium text-purple-600 tracking-wide uppercase animate-pulse bg-white/70 rounded-full px-3 py-1 shadow-sm">
             {isGenerating ? "✨ Creating your story…" : "🎤 Listening…"}
           </span>
         </div>
       )}
 
-      {/* StoryBook carousel — takes all remaining vertical space */}
-      <div className="flex flex-1 overflow-y-auto pb-72" data-testid="story-book-wrapper">
+      {/* ── StoryBook carousel ─────────────────────────────────────────────
+          Padding-bottom:
+            - showFullBar → 288 px (pb-72) to clear CaptionBar + VoiceButton
+            - reading mode → 20 px (pb-5) — just enough so the FAB doesn't
+              clip the very last pixel of the card shadow             */}
+      <div
+        className={[
+          "flex flex-1 overflow-y-auto transition-all duration-300",
+          showFullBar ? "pb-72" : "pb-5",
+        ].join(" ")}
+        data-testid="story-book-wrapper"
+      >
         <StoryBook
           pages={story.pages}
           isGenerating={isGenerating}
@@ -237,26 +297,55 @@ export default function StoryAppPage() {
         />
       </div>
 
-      {/* Caption bar — fixed bottom strip */}
-      <CaptionBar
-        captions={story.captions}
-        partialCaption={partialCaption}
-        safetyRewrite={safetyRewrite}
-        safetyAccepted={safetyAccepted}
-      />
-
-      {/* Voice button — floating above the caption bar */}
-      <div className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2">
-        <VoiceButton
-          isListening={voice.isListening}
-          steeringWindowOpen={story.steeringWindowOpen}
-          isGenerating={isGenerating}
-          onInterrupt={handleInterrupt}
-          onFeedback={handleFeedback}
+      {/* ── Caption bar — slides up when bar is expanded ─────────────────── */}
+      <div
+        className={[
+          "transition-transform duration-300",
+          showFullBar ? "translate-y-0" : "translate-y-full",
+        ].join(" ")}
+      >
+        <CaptionBar
+          captions={story.captions}
+          partialCaption={partialCaption}
+          safetyRewrite={safetyRewrite}
+          safetyAccepted={safetyAccepted}
         />
       </div>
 
-      {/* Silent audio element used to unlock browser autoplay policy on first mic tap */}
+      {/* ── Large VoiceButton — visible only when bar is expanded ─────────── */}
+      {showFullBar && (
+        <div className="absolute bottom-6 left-1/2 z-30 -translate-x-1/2">
+          <VoiceButton
+            isListening={voice.isListening}
+            steeringWindowOpen={story.steeringWindowOpen}
+            isGenerating={isGenerating}
+            onInterrupt={handleInterrupt}
+            onFeedback={handleFeedback}
+          />
+        </div>
+      )}
+
+      {/* ── Small floating mic FAB — reading mode (pages visible, bar collapsed) */}
+      {story.pages.size > 0 && !barExpanded && (
+        <button
+          type="button"
+          aria-label="Tap to speak"
+          onClick={handleFeedback}
+          className={[
+            "fixed bottom-5 right-5 z-30",
+            "flex h-14 w-14 items-center justify-center rounded-full shadow-xl",
+            "bg-purple-500 text-white",
+            "hover:bg-purple-600 active:bg-purple-700",
+            "transition-colors duration-150",
+            "focus:outline-none focus-visible:ring-4 focus-visible:ring-purple-400 focus-visible:ring-offset-2",
+          ].join(" ")}
+          data-testid="mic-fab"
+        >
+          <SmallMicIcon />
+        </button>
+      )}
+
+      {/* Silent audio element — unlocks browser autoplay on first mic tap */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <audio ref={audioUnlockRef} src="" className="hidden" aria-hidden="true" />
     </main>
