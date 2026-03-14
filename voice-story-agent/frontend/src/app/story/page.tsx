@@ -29,6 +29,7 @@ import type {
   SafetyRewriteEvent,
   SafetyAcceptedEvent,
   PageGeneratingEvent,
+  TranscriptEvent,
 } from "@/lib/wsTypes";
 import { StoryBook } from "@/components/StoryBook";
 import { CaptionBar } from "@/components/CaptionBar";
@@ -48,6 +49,7 @@ export default function StoryAppPage() {
   // ── Generation / completion state ───────────────────────────────────────
   const [isGenerating, setIsGenerating] = useState(false);
   const [storyComplete, setStoryComplete] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // ── Safety state ────────────────────────────────────────────────────────
   const [safetyRewrite, setSafetyRewrite] = useState<SafetyRewriteEvent | null>(null);
@@ -66,6 +68,7 @@ export default function StoryAppPage() {
 
     client.on("page_generating", (_evt: PageGeneratingEvent) => {
       setIsGenerating(true);
+      setIsProcessing(false);
     });
     client.on("page_complete", () => {
       setIsGenerating(false);
@@ -73,6 +76,10 @@ export default function StoryAppPage() {
     client.on("story_complete", () => {
       setStoryComplete(true);
       setIsGenerating(false);
+      setIsProcessing(false);
+    });
+    client.on("transcript", (_evt: TranscriptEvent) => {
+      setIsProcessing(false);
     });
     client.on("safety_rewrite", (evt: SafetyRewriteEvent) => {
       setSafetyRewrite(evt);
@@ -95,14 +102,12 @@ export default function StoryAppPage() {
 
   const handleFeedback = useCallback(() => {
     if (!voice.sessionId) {
-      // No session yet — start one (also starts the mic)
       voice.startSession().catch(() => { /* error shown in UI */ });
     } else if (voice.isListening) {
-      // Mic is running — stop it so the backend knows we're done speaking
-      // Keep the WebSocket open so story events can stream back
       voice.stopMic();
+      setIsProcessing(true);
     } else {
-      // Session exists and mic is off — resume mic on the same session.
+      setIsProcessing(false);
       voice.startMic().catch(() => { /* error shown in UI */ });
     }
   }, [voice]);
@@ -122,14 +127,17 @@ export default function StoryAppPage() {
     if (voice.isReconnecting) {
       return { emoji: "🔄", text: `Reconnecting… (attempt ${voice.reconnectAttempt})`, sub: "Hang tight, getting back to your story" };
     }
-    if (!voice.isListening && story.pages.size === 0 && !isGenerating) {
-      return { emoji: "🎙️", text: "Ready! Tap mic and tell your story", sub: "Who's the hero? Where does it happen?" };
-    }
     if (voice.isListening && story.pages.size === 0 && !isGenerating) {
-      return { emoji: "🎤", text: "Listening…", sub: "Speak clearly — tap stop when done" };
+      return { emoji: "🎤", text: "Listening…", sub: "Speak clearly — tap stop when done", showDots: true };
+    }
+    if (isProcessing && story.pages.size === 0 && !isGenerating) {
+      return { emoji: "⏳", text: "Processing your input…", sub: "The AI is thinking about your story", showDots: true };
     }
     if (isGenerating && story.pages.size === 0) {
-      return { emoji: "✨", text: "Creating your story…", sub: "Generating your personalised tale" };
+      return { emoji: "✨", text: "Creating your story…", sub: "Generating your personalised tale", showDots: true };
+    }
+    if (!voice.isListening && !isProcessing && story.pages.size === 0 && !isGenerating) {
+      return { emoji: "🎙️", text: "Ready! Tap mic and tell your story", sub: "Who's the hero? Where does it happen?" };
     }
     if (storyComplete) {
       return { emoji: "📖", text: "Your story is ready!", sub: "Tap the mic to hear it again" };
@@ -168,8 +176,8 @@ export default function StoryAppPage() {
           {statusMessage.sub && (
             <p className="text-base text-purple-500 max-w-sm">{statusMessage.sub}</p>
           )}
-          {/* Animated dots when listening or generating */}
-          {(voice.isListening || isGenerating) && (
+          {/* Animated dots when listening, processing, or generating */}
+          {(voice.isListening || isProcessing || isGenerating) && (
             <div className="flex gap-2 mt-2">
               {[0, 1, 2].map((i) => (
                 <span

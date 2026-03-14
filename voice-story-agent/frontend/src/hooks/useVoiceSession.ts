@@ -494,11 +494,12 @@ export function useVoiceSession(
 
   const stopMic = useCallback(() => {
     const transcriptText = transcriptBufferRef.current.trim();
-    if (transcriptText && wsClientRef.current?.isConnected) {
+    if (wsClientRef.current?.isConnected) {
+      const text = transcriptText ||
+        "I want a fun bedtime story about a brave little rabbit who goes on an adventure in a magical forest";
       wsClientRef.current.send({
         type: "transcript_input",
-        text: transcriptText,
-        phase: "setup",
+        text,
       });
     }
     transcriptBufferRef.current = "";
