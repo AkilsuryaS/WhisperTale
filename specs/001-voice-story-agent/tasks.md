@@ -1309,8 +1309,10 @@ Classification heuristics (regex + keyword matching, no Gemini call):
 ### T-029 · StoryPlannerService — apply_steering
 
 **Priority**: P2
+**Status**: ✅ Done — `app/services/story_planner.py` extended with `apply_steering(arc, command, from_page, content_policy=None) -> list[str]`. Single Gemini 2.5 Flash call with `_APPLY_STEERING_SYSTEM_PROMPT` (children's story editor persona, ≤40 word beats, content exclusion hard constraints). `_build_apply_steering_prompt` constructs the user-turn: remaining beats for pages `from_page..5` (indexed by page number), `command.interpreted_intent` as the STEERING INTENT, and `content_policy.exclusions` as CONTENT EXCLUSIONS (or "(none)" when `None`). `_validate_steering_beats` validates that the response contains exactly `expected_count` non-empty beats. `apply_steering` slices `arc[:from_page-1]` (unchanged prefix) + revised tail; validates `len(arc)==5` and `1≤from_page≤5` with `ValueError` before any Gemini call; wraps all Gemini/parse failures in `StoryPlannerError` with `.cause`. `ContentPolicy` and `VoiceCommand` imports added. 28 mock-based tests covering: unchanged prefix for all `from_page` values (1–5), revised beats replace tail, full-arc update (from_page=1), single-beat update (from_page=5), exclusions present in prompt, no `content_policy` works, intent in prompt, Gemini failure → `StoryPlannerError`, malformed JSON → `StoryPlannerError`, wrong beat count → `StoryPlannerError`, input validation (`ValueError`), and pure helper unit tests for `_build_apply_steering_prompt` and `_validate_steering_beats`. 760 total passing (30 integration tests deselected). Ruff clean.
 **Files**:
 - `voice-story-agent/backend/app/services/story_planner.py` (extend)
+- `voice-story-agent/backend/tests/test_t029_story_planner_apply_steering.py`
 
 **Description**:
 Implement:
