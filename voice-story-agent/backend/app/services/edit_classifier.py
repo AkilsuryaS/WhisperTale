@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 from typing import Any, Optional
 
 from google import genai
@@ -187,7 +188,10 @@ class EditClassifierService:
                     temperature=0.2,
                 ),
             )
-            data: dict[str, Any] = json.loads(response.text)
+            raw_text = response.text or ""
+            # Gemini occasionally emits trailing commas; strip them.
+            cleaned = re.sub(r",\s*([}\]])", r"\1", raw_text)
+            data: dict[str, Any] = json.loads(cleaned)
         except Exception as exc:
             logger.error(
                 "EditClassifierService: Gemini call failed (session=%s): %s",

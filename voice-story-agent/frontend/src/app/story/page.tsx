@@ -39,6 +39,8 @@ import type {
   SafetyAcceptedEvent,
   PageGeneratingEvent,
   TranscriptEvent,
+  EditStartedEvent,
+  EditCompleteEvent,
   EditFailedEvent,
 } from "@/lib/wsTypes";
 import { StoryBook } from "@/components/StoryBook";
@@ -90,6 +92,24 @@ export default function StoryAppPage() {
   // ── Safety state ────────────────────────────────────────────────────────
   const [safetyRewrite, setSafetyRewrite] = useState<SafetyRewriteEvent | null>(null);
   const [safetyAccepted, setSafetyAccepted] = useState<SafetyAcceptedEvent | null>(null);
+
+  // ── Edit toast notification ──────────────────────────────────────────────
+  const [editToast, setEditToast] = useState<{
+    message: string;
+    variant: "info" | "success" | "error";
+  } | null>(null);
+  const editToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showEditToast = useCallback(
+    (message: string, variant: "info" | "success" | "error", durationMs = 4000) => {
+      if (editToastTimerRef.current) clearTimeout(editToastTimerRef.current);
+      setEditToast({ message, variant });
+      if (variant !== "info") {
+        editToastTimerRef.current = setTimeout(() => setEditToast(null), durationMs);
+      }
+    },
+    []
+  );
 
   // ── Bottom-bar expanded/collapsed state ─────────────────────────────────
   // true  → full CaptionBar + large VoiceButton visible
@@ -152,10 +172,17 @@ export default function StoryAppPage() {
     client.on("safety_accepted", (evt: SafetyAcceptedEvent) => {
       setSafetyAccepted(evt);
     });
+    client.on("edit_started", (_evt: EditStartedEvent) => {
+      showEditToast("Applying your change\u2026", "info");
+    });
+    client.on("edit_complete", (_evt: EditCompleteEvent) => {
+      showEditToast("Story updated!", "success");
+    });
     client.on("edit_failed", (_evt: EditFailedEvent) => {
       console.warn("[StoryAppPage] edit failed:", _evt.error);
+      showEditToast("Couldn\u2019t apply that change. Try again.", "error");
     });
-  }, [voice.wsClient]);
+  }, [voice.wsClient, showEditToast]);
 
   // ── Interrupt / feedback handlers ────────────────────────────────────────
   const handleInterrupt = useCallback(() => {
@@ -271,6 +298,44 @@ export default function StoryAppPage() {
             onClick={() => voice.stopSession()}
           >
             Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Edit toast notification */}
+      {editToast && (
+        <div
+          data-testid="edit-toast"
+          role="status"
+          className={[
+            "absolute top-3 left-1/2 z-30 -translate-x-1/2",
+            "flex items-center gap-2 rounded-full px-5 py-2.5 shadow-lg text-sm font-medium",
+            "transition-all duration-300 animate-fade-in",
+            editToast.variant === "info"
+              ? "bg-purple-600 text-white"
+              : editToast.variant === "success"
+                ? "bg-green-600 text-white"
+                : "bg-red-600 text-white",
+          ].join(" ")}
+        >
+          {editToast.variant === "info" && (
+            <span className="flex gap-1">
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="inline-block w-1.5 h-1.5 rounded-full bg-white/80 animate-bounce"
+                  style={{ animationDelay: `${i * 0.15}s` }}
+                />
+              ))}
+            </span>
+          )}
+          <span>{editToast.message}</span>
+          <button
+            onClick={() => setEditToast(null)}
+            className="ml-1 text-white/70 hover:text-white"
+            aria-label="Dismiss"
+          >
+            &times;
           </button>
         </div>
       )}

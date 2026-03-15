@@ -507,6 +507,10 @@ class CharacterBibleService:
             CharacterBibleServiceError: on Firestore read/write failure or
                 if the CharacterBible does not exist.
         """
+        _ALLOWED_PREFIXES = (
+            "protagonist.", "style_bible.", "content_policy.", "character_refs.",
+        )
+
         try:
             store = self._get_store()
             bible = await store.get_character_bible(session_id)
@@ -517,6 +521,20 @@ class CharacterBibleService:
                 )
 
             for field_path, value in patch.items():
+                if "." not in field_path or not field_path.startswith(_ALLOWED_PREFIXES):
+                    logger.warning(
+                        "apply_bible_patch: skipping invalid key %r "
+                        "(must use dot-notation like protagonist.color)",
+                        field_path,
+                    )
+                    continue
+                if not isinstance(value, (str, int, float, bool)):
+                    logger.warning(
+                        "apply_bible_patch: skipping key %r — value must be "
+                        "a primitive type, got %s",
+                        field_path, type(value).__name__,
+                    )
+                    continue
                 await store.update_character_bible_field(
                     session_id, field_path, value
                 )
