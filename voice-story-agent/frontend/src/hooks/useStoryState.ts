@@ -164,6 +164,24 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
   const [isEditing, setIsEditing] = useState(false);
   const [editingPages, setEditingPages] = useState<Set<number>>(new Set());
 
+  // Auto-clear edit state if no edit_complete/edit_failed arrives within 3 min.
+  const editTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearEditTimeout = useCallback(() => {
+    if (editTimeoutRef.current) {
+      clearTimeout(editTimeoutRef.current);
+      editTimeoutRef.current = null;
+    }
+  }, []);
+
+  const startEditTimeout = useCallback(() => {
+    clearEditTimeout();
+    editTimeoutRef.current = setTimeout(() => {
+      setIsEditing(false);
+      setEditingPages(new Set());
+    }, 180_000);
+  }, [clearEditTimeout]);
+
   // Track which client we are currently subscribed to so we can detect changes.
   const subscribedClientRef = useRef<WsClient | null>(null);
 
@@ -227,6 +245,14 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
       });
       return next;
     });
+    // During edits, a failed illustration should still clear the overlay
+    if (evt.asset_type === "illustration") {
+      setEditingPages((prev) => {
+        const next = new Set(prev);
+        next.delete(evt.page);
+        return next;
+      });
+    }
   }, []);
 
   const handlePageComplete = useCallback((evt: PageCompleteEvent) => {
@@ -274,7 +300,8 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
   const handleEditStarted = useCallback((evt: EditStartedEvent) => {
     setIsEditing(true);
     setEditingPages(new Set(evt.affected_pages));
-  }, []);
+    startEditTimeout();
+  }, [startEditTimeout]);
 
   const handlePageRegenerating = useCallback((evt: PageRegeneratingEvent) => {
     setEditingPages((prev) => new Set([...prev, evt.page]));
@@ -325,11 +352,13 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
   }, []);
 
   const handleEditComplete = useCallback((_evt: EditCompleteEvent) => {
+    clearEditTimeout();
     setIsEditing(false);
     setEditingPages(new Set());
-  }, []);
+  }, [clearEditTimeout]);
 
   const handleEditFailed = useCallback((_evt: EditFailedEvent) => {
+    clearEditTimeout();
     setIsEditing(false);
     setEditingPages(new Set());
   }, []);

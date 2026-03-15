@@ -42,6 +42,7 @@ import type {
   EditStartedEvent,
   EditCompleteEvent,
   EditFailedEvent,
+  PageRegeneratingEvent,
 } from "@/lib/wsTypes";
 import { StoryBook } from "@/components/StoryBook";
 import { CaptionBar } from "@/components/CaptionBar";
@@ -172,8 +173,17 @@ export default function StoryAppPage() {
     client.on("safety_accepted", (evt: SafetyAcceptedEvent) => {
       setSafetyAccepted(evt);
     });
-    client.on("edit_started", (_evt: EditStartedEvent) => {
-      showEditToast("Applying your change\u2026", "info");
+    client.on("edit_started", (evt: EditStartedEvent) => {
+      const total = evt.affected_pages?.length ?? 0;
+      showEditToast(
+        total > 1
+          ? `Applying your change across ${total} pages\u2026`
+          : "Applying your change\u2026",
+        "info",
+      );
+    });
+    client.on("page_regenerating", (evt: PageRegeneratingEvent) => {
+      showEditToast(`Updating page ${evt.page}\u2026`, "info");
     });
     client.on("edit_complete", (_evt: EditCompleteEvent) => {
       showEditToast("Story updated!", "success");
@@ -183,6 +193,15 @@ export default function StoryAppPage() {
       showEditToast("Couldn\u2019t apply that change. Try again.", "error");
     });
   }, [voice.wsClient, showEditToast]);
+
+  // If the edit state clears (either from edit_complete, edit_failed, or
+  // the 3-minute timeout in useStoryState) while the toast is still "info",
+  // dismiss it so the user isn't stuck staring at "Applying your change…".
+  useEffect(() => {
+    if (!story.isEditing && editToast?.variant === "info") {
+      showEditToast("Story updated!", "success");
+    }
+  }, [story.isEditing, editToast?.variant, showEditToast]);
 
   // ── Interrupt / feedback handlers ────────────────────────────────────────
   const handleInterrupt = useCallback(() => {
