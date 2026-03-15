@@ -2,7 +2,8 @@
 
 A real-time, voice-powered AI storytelling agent that turns a child's spoken idea into a fully illustrated 5-page storybook — complete with consistent characters, per-page narration audio, and the ability to steer the story mid-flow using voice.
 
-**Hackathon category**: Creative Storyteller
+**Hackathon**: [Gemini Live Agent Challenge](https://geminiliveagentchallenge.devpost.com/) — *Redefining Interaction: From Static Chatbots to Immersive Experiences*
+**Category**: Creative Storyteller
 
 > A child holds the microphone and says *"Tell me a story about a little purple monster who makes too much noise."* The agent listens, asks a few follow-up questions (*What's the monster's name? Where does it live?*), then generates five illustrated pages one by one — each with story text, an AI-generated illustration, and spoken narration. Halfway through, the child interrupts: *"Give the monster a tiny yellow bird friend!"* The agent re-plans the remaining pages, and the bird appears with visual consistency across every subsequent illustration.
 
