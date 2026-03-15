@@ -44,7 +44,6 @@ import { StoryBook } from "@/components/StoryBook";
 import { CaptionBar } from "@/components/CaptionBar";
 import type { PartialCaption } from "@/components/CaptionBar";
 import { VoiceButton } from "@/components/VoiceButton";
-import { StoryTextInput } from "@/components/StoryTextInput";
 
 // ---------------------------------------------------------------------------
 // Small mic icon — used by the floating FAB in reading mode
@@ -344,6 +343,11 @@ export default function StoryAppPage() {
         />
       </div>
 
+import { StoryTextInput } from "@/components/StoryTextInput";
+
+// ... [existing imports]
+
+// (Inside the component, replacing the floating mic FAB area with the new layout)
       {/* ── Text Input & FAB Area (Bottom-Right) ── */}
       {story.pages.size > 0 && !barExpanded && (
         <div className="fixed bottom-5 right-5 z-30 flex flex-col items-end gap-3">
