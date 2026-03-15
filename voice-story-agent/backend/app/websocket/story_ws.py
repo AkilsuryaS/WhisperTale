@@ -109,6 +109,8 @@ from app.services.image_generation import ImageGenerationService
 from app.services.media_persistence import MediaPersistenceService
 from app.services.safety_service import SafetyService
 from app.services.session_store import SessionStore
+from app.services.edit_classifier import EditClassifierService
+from app.services.edit_handler import EditHandlerService
 from app.services.story_planner import StoryPlannerService
 from app.services.tts_service import TTSService
 
@@ -1215,6 +1217,88 @@ async def story_websocket(
                             setup_state,
                             store,
                         )
+
+            elif msg_type == "edit_request":
+                edit_instruction = (
+                    str(data.get("instruction", "")) if isinstance(data, dict) else ""
+                )
+                edit_hint_page = (
+                    data.get("hint_page") if isinstance(data, dict) else None
+                )
+
+                if not edit_instruction.strip():
+                    await emit(
+                        websocket, "edit_failed",
+                        error="Edit instruction is empty",
+                    )
+                    continue
+
+                # Guard: only allow edits when story is complete and no
+                # active page loop is running
+                try:
+                    edit_session = await store.get_session(session_id)
+                except Exception:
+                    await emit(
+                        websocket, "edit_failed",
+                        error="Failed to fetch session",
+                    )
+                    continue
+
+                if edit_session.status != SessionStatus.complete:
+                    await emit(
+                        websocket, "edit_failed",
+                        error="Edits are only allowed after story is complete",
+                    )
+                    continue
+
+                if page_loop_state.page_loop_active:
+                    await emit(
+                        websocket, "edit_failed",
+                        error="Cannot edit while pages are generating",
+                    )
+                    continue
+
+                async def _run_edit_task(
+                    _instruction: str = edit_instruction,
+                    _hint_page: int | None = edit_hint_page,
+                ) -> None:
+                    async def ws_emit(event_type: str, **fields: object) -> None:
+                        try:
+                            await emit(websocket, event_type, **fields)
+                        except Exception:
+                            pass
+
+                    try:
+                        classifier = EditClassifierService(store=store)
+                        decision = await classifier.classify(
+                            session_id, _instruction, _hint_page
+                        )
+
+                        handler = EditHandlerService(
+                            store=store,
+                            story_planner=story_planner,
+                            character_bible_svc=character_bible_svc,
+                            image_svc=image_svc,
+                            tts_svc=tts_svc,
+                            media_svc=media_svc,
+                        )
+                        await handler.run_edit(session_id, decision, ws_emit)
+                    except Exception as exc:
+                        logger.error(
+                            "edit_request: task failed (session=%s): %s",
+                            session_id, exc,
+                        )
+                        try:
+                            await ws_emit("edit_failed", error=str(exc))
+                        except Exception:
+                            pass
+
+                asyncio.create_task(_run_edit_task())
+                logger.info(
+                    "edit_request: spawned edit task (session=%s, instruction=%r)",
+                    session_id,
+                    edit_instruction[:80],
+                )
 
             else:
                 await emit(websocket, "session_error", code="unknown_message_type")

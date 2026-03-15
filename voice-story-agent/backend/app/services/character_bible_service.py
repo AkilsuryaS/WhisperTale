@@ -482,6 +482,72 @@ class CharacterBibleService:
             char_ref.name,
         )
 
+    async def apply_bible_patch(
+        self,
+        session_id: str,
+        patch: dict[str, object],
+    ) -> "CharacterBible":
+        """
+        Apply a partial update to the CharacterBible using dot-notation keys.
+
+        Accepts keys like ``protagonist.color``, ``protagonist.attire``,
+        ``style_bible.mood``, etc.  Each key is written to Firestore as a
+        single field update, then the full updated CharacterBible is fetched
+        and returned.
+
+        Args:
+            session_id: The session whose CharacterBible to update.
+            patch:      Dict of dot-notation field paths to new values,
+                        e.g. ``{"protagonist.color": "black"}``.
+
+        Returns:
+            The updated CharacterBible.
+
+        Raises:
+            CharacterBibleServiceError: on Firestore read/write failure or
+                if the CharacterBible does not exist.
+        """
+        try:
+            store = self._get_store()
+            bible = await store.get_character_bible(session_id)
+            if bible is None:
+                raise CharacterBibleServiceError(
+                    f"CharacterBible not found for session {session_id}",
+                    cause=None,
+                )
+
+            for field_path, value in patch.items():
+                await store.update_character_bible_field(
+                    session_id, field_path, value
+                )
+
+            updated_bible = await store.get_character_bible(session_id)
+            if updated_bible is None:
+                raise CharacterBibleServiceError(
+                    f"CharacterBible disappeared after patch for session {session_id}",
+                    cause=None,
+                )
+        except CharacterBibleServiceError:
+            raise
+        except Exception as exc:
+            logger.error(
+                "CharacterBibleService: apply_bible_patch failed "
+                "(session=%s, error_type=%s)",
+                session_id,
+                type(exc).__name__,
+            )
+            raise CharacterBibleServiceError(
+                "Failed to apply bible patch",
+                cause=exc,
+            ) from exc
+
+        logger.info(
+            "CharacterBibleService: bible patch applied (session=%s, fields=%s)",
+            session_id,
+            list(patch.keys()),
+        )
+        return updated_bible
+
     async def update_mood(
         self,
         session_id: str,

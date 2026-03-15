@@ -220,6 +220,7 @@ def _build_expand_page_prompt(
     page_history: list[str],
     bible: CharacterBible,
     strict: bool = False,
+    edit_instruction: str | None = None,
 ) -> str:
     """Build the user-turn prompt for the expand_page Gemini call."""
     protagonist = bible.protagonist
@@ -242,6 +243,13 @@ def _build_expand_page_prompt(
         else ""
     )
 
+    edit_block = (
+        f"\n\nEDIT INSTRUCTION (apply this change while keeping the page "
+        f"consistent with the story):\n  {edit_instruction}"
+        if edit_instruction
+        else ""
+    )
+
     return (
         f"PROTAGONIST\n"
         f"  Name:        {protagonist.name}\n"
@@ -261,6 +269,7 @@ def _build_expand_page_prompt(
         f"CONTENT EXCLUSIONS (must not appear in the text):\n"
         f"{exclusion_block}"
         f"{strict_note}"
+        f"{edit_block}"
     )
 
 
@@ -483,6 +492,7 @@ class StoryPlannerService:
         beat: str,
         page_history: list[str],
         bible: CharacterBible,
+        edit_instruction: str | None = None,
     ) -> tuple[str, str]:
         """
         Expand a single story beat into page text and a narration script.
@@ -491,9 +501,13 @@ class StoryPlannerService:
         count is outside 60–120 words, retries once with a stricter prompt.
 
         Args:
-            beat:         The narrative beat describing what happens on this page.
-            page_history: One-sentence summaries of prior pages (empty for page 1).
-            bible:        CharacterBible providing protagonist info + content policy.
+            beat:             The narrative beat describing what happens on this page.
+            page_history:     One-sentence summaries of prior pages (empty for page 1).
+            bible:            CharacterBible providing protagonist info + content policy.
+            edit_instruction: Optional edit instruction to apply while rewriting
+                              this page.  When provided, the instruction is
+                              appended to the prompt so the model rewrites the
+                              page text accordingly.
 
         Returns:
             (display_text, narration_script) where ``display_text`` is 60–120 words.
@@ -505,7 +519,11 @@ class StoryPlannerService:
 
         for attempt, strict in enumerate([False, True], start=1):
             try:
-                prompt = _build_expand_page_prompt(beat, page_history, bible, strict=strict)
+                prompt = _build_expand_page_prompt(
+                    beat, page_history, bible,
+                    strict=strict,
+                    edit_instruction=edit_instruction,
+                )
                 system = (
                     _EXPAND_PAGE_STRICT_SYSTEM_PROMPT if strict else _EXPAND_PAGE_SYSTEM_PROMPT
                 )

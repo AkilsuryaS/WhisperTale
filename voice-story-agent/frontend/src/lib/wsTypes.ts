@@ -63,13 +63,21 @@ export interface PingMessage {
   type: "ping";
 }
 
+/** Post-generation story edit request. */
+export interface EditRequestMessage {
+  type: "edit_request";
+  instruction: string;
+  hint_page?: number;
+}
+
 /** Union of all client→server JSON messages. */
 export type WsClientMessage =
   | SessionStartMessage
   | TranscriptInputMessage
   | InterruptMessage
   | VoiceFeedbackMessage
-  | PingMessage;
+  | PingMessage
+  | EditRequestMessage;
 
 // ---------------------------------------------------------------------------
 // SERVER → CLIENT messages
@@ -299,6 +307,54 @@ export interface PongEvent {
   type: "pong";
 }
 
+/** Edit classification and regeneration has started. */
+export interface EditStartedEvent {
+  type: "edit_started";
+  scope: "global_character" | "single_page" | "cascade";
+  affected_pages: number[];
+}
+
+/** A page is being regenerated as part of an edit. */
+export interface PageRegeneratingEvent {
+  type: "page_regenerating";
+  page: number;
+}
+
+/** Updated page text after an edit. */
+export interface PageTextUpdatedEvent {
+  type: "page_text_updated";
+  page: number;
+  text: string;
+  narration_script: string;
+}
+
+/** Updated page image after an edit. */
+export interface PageImageUpdatedEvent {
+  type: "page_image_updated";
+  page: number;
+  image_url: string;
+  gcs_uri: string;
+}
+
+/** Updated page audio after an edit. */
+export interface PageAudioUpdatedEvent {
+  type: "page_audio_updated";
+  page: number;
+  audio_url: string;
+  gcs_uri: string;
+}
+
+/** Edit completed successfully. */
+export interface EditCompleteEvent {
+  type: "edit_complete";
+}
+
+/** Edit failed. */
+export interface EditFailedEvent {
+  type: "edit_failed";
+  error: string;
+}
+
 /** Union of all server→client JSON messages. */
 export type WsServerEvent =
   | ConnectedEvent
@@ -323,7 +379,14 @@ export type WsServerEvent =
   | SteeringWindowClosedEvent
   | StoryCompleteEvent
   | SessionErrorEvent
-  | PongEvent;
+  | PongEvent
+  | EditStartedEvent
+  | PageRegeneratingEvent
+  | PageTextUpdatedEvent
+  | PageImageUpdatedEvent
+  | PageAudioUpdatedEvent
+  | EditCompleteEvent
+  | EditFailedEvent;
 
 /** Extract the payload type for a given server event type string. */
 export type WsServerEventByType<T extends WsServerEvent["type"]> = Extract<

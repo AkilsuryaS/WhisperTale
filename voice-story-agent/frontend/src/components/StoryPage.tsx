@@ -20,6 +20,7 @@
 
 import React, { useRef, useEffect } from "react";
 import type { PageState } from "@/hooks/useStoryState";
+import { EditPanel } from "./EditPanel";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +37,14 @@ export interface StoryPageProps {
   isActive: boolean;
   /** True while mic is open; pauses narration playback. */
   isNarrationPaused?: boolean;
+  /** True when this page is being regenerated as part of an edit. */
+  isRegenerating?: boolean;
+  /** True after story_complete — shows edit controls. */
+  storyComplete?: boolean;
+  /** Called when user submits an edit instruction for this page. */
+  onEditRequest?: (instruction: string) => void;
+  /** True while any edit is in progress. */
+  isEditing?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +104,10 @@ export function StoryPage({
   totalPages,
   isActive,
   isNarrationPaused = false,
+  isRegenerating = false,
+  storyComplete = false,
+  onEditRequest,
+  isEditing = false,
 }: StoryPageProps) {
   const hasText = page.text !== null;
   const hasImage = page.imageUrl !== null;
@@ -112,7 +125,6 @@ export function StoryPage({
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     } else if (isNarrationPaused) {
-      // Pause while mic is open and resume from same position on close.
       audioRef.current.pause();
     }
   }, [isActive, page.audioUrl, isNarrationPaused, pageNumber]);
@@ -121,8 +133,27 @@ export function StoryPage({
     <article
       data-testid="story-page"
       aria-label={`Page ${pageNumber} of ${totalPages}`}
-      className="flex w-full max-w-2xl flex-col gap-4 rounded-3xl bg-white p-6 shadow-xl"
+      className="relative flex w-full max-w-2xl flex-col gap-4 rounded-3xl bg-white p-6 shadow-xl"
     >
+      {/* ── Regenerating overlay ────────────────────────────────────────────── */}
+      {isRegenerating && (
+        <div
+          data-testid="regenerating-overlay"
+          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-3xl bg-white/80 backdrop-blur-sm"
+        >
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="inline-block h-3 w-3 rounded-full bg-purple-400 animate-bounce"
+                style={{ animationDelay: `${i * 0.15}s` }}
+              />
+            ))}
+          </div>
+          <p className="text-sm font-medium text-purple-600">Updating page…</p>
+        </div>
+      )}
+
       {/* ── Page number indicator ──────────────────────────────────────────── */}
       <p
         data-testid="page-number-indicator"
@@ -151,7 +182,6 @@ export function StoryPage({
 
         {page.illustrationFailed && <PaintingPlaceholder />}
 
-        {/* Skeleton shown while no image yet and not failed */}
         {!hasImage && !page.illustrationFailed && (
           <div
             data-testid="illustration-skeleton"
@@ -202,6 +232,16 @@ export function StoryPage({
       )}
 
       {page.audioFailed && <AudioFallback />}
+
+      {/* ── Edit panel — visible only after story is complete ────────────── */}
+      {storyComplete && onEditRequest && (
+        <div className="flex justify-end" data-testid="edit-panel-wrapper">
+          <EditPanel
+            onEditRequest={onEditRequest}
+            isEditing={isEditing}
+          />
+        </div>
+      )}
     </article>
   );
 }

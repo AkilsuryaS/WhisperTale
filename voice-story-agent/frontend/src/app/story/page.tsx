@@ -39,6 +39,7 @@ import type {
   SafetyAcceptedEvent,
   PageGeneratingEvent,
   TranscriptEvent,
+  EditFailedEvent,
 } from "@/lib/wsTypes";
 import { StoryBook } from "@/components/StoryBook";
 import { CaptionBar } from "@/components/CaptionBar";
@@ -151,6 +152,9 @@ export default function StoryAppPage() {
     client.on("safety_accepted", (evt: SafetyAcceptedEvent) => {
       setSafetyAccepted(evt);
     });
+    client.on("edit_failed", (_evt: EditFailedEvent) => {
+      console.warn("[StoryAppPage] edit failed:", _evt.error);
+    });
   }, [voice.wsClient]);
 
   // ── Interrupt / feedback handlers ────────────────────────────────────────
@@ -194,6 +198,14 @@ export default function StoryAppPage() {
       voice.startMic().catch(() => { /* error shown in UI */ });
     }
   }, [voice, story.pages.size, story.steeringWindowOpen, story.steeringWindowPage]);
+
+  // ── Edit request handler ─────────────────────────────────────────────────
+  const handleEditRequest = useCallback(
+    (instruction: string, pageNumber: number) => {
+      story.sendEditRequest(instruction, pageNumber);
+    },
+    [story]
+  );
 
   // ── Derived state ────────────────────────────────────────────────────────
   const totalPages = 5;
@@ -313,6 +325,9 @@ export default function StoryAppPage() {
           steeringWindowOpen={story.steeringWindowOpen}
           totalPages={totalPages}
           pauseNarration={voice.isListening}
+          editingPages={story.editingPages}
+          onEditRequest={handleEditRequest}
+          isEditing={story.isEditing}
         />
       </div>
 
