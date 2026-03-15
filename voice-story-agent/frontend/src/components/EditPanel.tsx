@@ -17,18 +17,23 @@ export interface EditPanelProps {
   isEditing: boolean;
 }
 
-// SpeechRecognition type shim for browsers that use the webkit prefix
-type SpeechRecognitionInstance = InstanceType<
-  typeof window extends { SpeechRecognition: infer T }
-    ? T extends new (...args: unknown[]) => unknown
-      ? T
-      : never
-    : never
->;
+// Minimal interface for the parts of SpeechRecognition we actually use.
+// Avoids relying on the full lib.dom.d.ts type (unavailable in some tsconfigs)
+// and avoids the webkit-prefix lookup resolving to `never`.
+interface SpeechRecognitionLike {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: { results: { transcript: string }[][] }) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+}
 
-function getSpeechRecognition():
-  | (new () => SpeechRecognitionInstance)
-  | null {
+type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
+
+function getSpeechRecognition(): SpeechRecognitionCtor | null {
   if (typeof window === "undefined") return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition ?? null;
@@ -38,8 +43,7 @@ export function EditPanel({ onEditRequest, isEditing }: EditPanelProps) {
   const [expanded, setExpanded] = useState(false);
   const [instruction, setInstruction] = useState("");
   const [isListening, setIsListening] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleToggle = useCallback(() => {
@@ -87,7 +91,7 @@ export function EditPanel({ onEditRequest, isEditing }: EditPanelProps) {
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (event: { results: { transcript: string }[][] }) => {
+    recognition.onresult = (event) => {
       const transcript = event.results[0]?.[0]?.transcript;
       if (transcript) {
         setInstruction((prev) => (prev ? `${prev} ${transcript}` : transcript));
