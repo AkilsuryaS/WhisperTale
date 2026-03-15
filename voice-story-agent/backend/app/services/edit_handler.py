@@ -112,21 +112,43 @@ class EditHandlerService:
         decision: EditDecision,
         emit: Callable,
     ) -> None:
-        """Update CharacterBible and regenerate images for all affected pages."""
+        """Update CharacterBible, then regenerate text + image + audio for all pages."""
         if decision.bible_patch:
             await self._bible_svc.apply_bible_patch(session_id, decision.bible_patch)
 
-        bible = await self._store.get_character_bible(session_id)
-        if bible is None:
-            raise ValueError("CharacterBible not found after patch")
-
-        tasks = []
-        for page_num in decision.affected_pages:
-            tasks.append(
-                self._regenerate_image(session_id, page_num, bible, emit)
+        # Build a fallback text instruction from the bible_patch when the
+        # classifier didn't provide page_instructions.
+        text_instruction: str | None = None
+        if decision.page_instructions:
+            first_key = next(iter(decision.page_instructions))
+            text_instruction = decision.page_instructions[first_key]
+        elif decision.bible_patch:
+            patch_desc = ", ".join(
+                f"{k} is now {v}" for k, v in decision.bible_patch.items()
+            )
+            text_instruction = (
+                f"A character attribute has changed: {patch_desc}. "
+                "Update every mention in the text to reflect this change. "
+                "Keep the plot, structure, and tone identical."
             )
 
-        await asyncio.gather(*tasks, return_exceptions=True)
+        sorted_pages = sorted(decision.affected_pages)
+        page_history: list[str] = []
+
+        first_affected = sorted_pages[0]
+        for pn in range(1, first_affected):
+            existing = await self._store.get_page(session_id, pn)
+            if existing and existing.text:
+                page_history.append(" ".join(existing.text.split()[:25]))
+
+        for page_num in sorted_pages:
+            await self._regenerate_page(
+                session_id, page_num, text_instruction, emit,
+                page_history=page_history,
+            )
+            updated = await self._store.get_page(session_id, page_num)
+            if updated and updated.text:
+                page_history.append(" ".join(updated.text.split()[:25]))
 
     async def _handle_single_page(
         self,

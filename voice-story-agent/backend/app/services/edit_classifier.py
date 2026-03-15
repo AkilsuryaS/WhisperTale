@@ -34,8 +34,11 @@ pages are affected.
 EDIT SCOPES:
   - "global_character": The user wants to change a character attribute (color, \
     attire, species) that affects visual identity across the whole story. \
-    Text stays the same — only images need regeneration. Return bible_patch \
-    with dot-notation keys (e.g. {"protagonist.color": "black"}).
+    Text, images, and audio are ALL regenerated for every page to reflect \
+    the change. Return bible_patch with dot-notation keys \
+    (e.g. {"protagonist.color": "black"}) AND a page_instructions entry \
+    that describes the text change to apply across all pages \
+    (e.g. {1: "The cat is now black instead of white. Update all references."}).
   - "single_page": The user wants to change something on one specific page \
     only (emotion, action, dialogue) without affecting subsequent pages. \
     Both text and image for that page are regenerated.
@@ -46,8 +49,10 @@ EDIT SCOPES:
 RULES:
   - affected_pages must be a list of 1-based page numbers (1–5).
   - For global_character: affected_pages = [1,2,3,4,5]. bible_patch must be \
-    a dict of dot-notation field paths → new values. page_instructions should \
-    be empty.
+    a dict of dot-notation field paths → new values. page_instructions must \
+    have at least one entry with an instruction describing the attribute \
+    change so page text can be updated (the same instruction is applied to \
+    every affected page).
   - For single_page: affected_pages = [N]. page_instructions must have key N \
     with the specific rewrite instruction for that page.
   - For cascade: affected_pages = [N, N+1, ..., 5]. page_instructions must \
