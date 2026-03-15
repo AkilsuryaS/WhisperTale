@@ -58,6 +58,12 @@ export interface VoiceFeedbackMessage {
   command_type: CommandType;
 }
 
+/** Explicit text command submitted via the typing UI. */
+export interface TextStoryUpdateMessage {
+  type: "text_story_update";
+  text: string;
+}
+
 /** Keepalive ping; server responds with `pong`. */
 export interface PingMessage {
   type: "ping";
@@ -69,6 +75,7 @@ export type WsClientMessage =
   | TranscriptInputMessage
   | InterruptMessage
   | VoiceFeedbackMessage
+  | TextStoryUpdateMessage
   | PingMessage;
 
 // ---------------------------------------------------------------------------

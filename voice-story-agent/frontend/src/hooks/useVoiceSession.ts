@@ -110,6 +110,8 @@ export interface UseVoiceSessionReturn {
   startMic: () => Promise<void>;
   /** Stop only the microphone — keeps WebSocket open. Returns the captured transcript text. */
   stopMic: () => string;
+  /** Send an explicit text-based story update command. */
+  sendTextUpdate: (text: string) => void;
   /** Stop streaming and disconnect cleanly (full teardown). */
   stopSession: () => void;
 }
@@ -545,6 +547,12 @@ export function useVoiceSession(
     return text;
   }, [stopStreaming, liveTranscript]);
 
+  const sendTextUpdate = useCallback((text: string) => {
+    if (wsClientRef.current?.isConnected) {
+      wsClientRef.current.sendTextUpdate(text);
+    }
+  }, []);
+
   // ---------------------------------------------------------------------------
   // stopSession
   // ---------------------------------------------------------------------------
@@ -594,6 +602,7 @@ export function useVoiceSession(
     startSession,
     startMic,
     stopMic,
+    sendTextUpdate,
     stopSession,
   };
 }

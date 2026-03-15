@@ -1138,6 +1138,43 @@ async def story_websocket(
                                     exc,
                                 )
 
+            elif msg_type == "text_story_update":
+                # T-031: Explicit text update from the UI.
+                text = str(data.get("text", "")) if isinstance(data, dict) else ""
+                if not text.strip():
+                    continue
+                turn_id = str(uuid.uuid4())
+                from app.services.adk_voice_service import TextTurn
+                synthetic_turn = TextTurn(
+                    role="user",
+                    transcript=text,
+                    audio_bytes=None,
+                    is_final=True,
+                )
+
+                # Echo back so UI knows it was received
+                await emit(
+                    websocket,
+                    "transcript",
+                    role="user",
+                    text=text,
+                    is_final=True,
+                    phase="steering",
+                    turn_id=turn_id,
+                )
+
+                if page_loop_state.in_steering_window:
+                    await page_loop_state.steering_turn_queue.put(synthetic_turn)
+                    logger.info("text_story_update routed to active steering window (session=%s)", session_id)
+                elif page_loop_state.page_loop_active:
+                    page_loop_state.user_interrupted = True
+                    await page_loop_state.steering_turn_queue.put(synthetic_turn)
+                    if not page_loop_state.interrupt_event.is_set():
+                        page_loop_state.interrupt_event.set()
+                    logger.info("text_story_update: force-entering steering (session=%s)", session_id)
+                else:
+                    logger.warning("text_story_update ignored outside page loop (session=%s)", session_id)
+
             elif msg_type == "interrupt":
                 # T-031: client interrupts mid-narration to enter steering window
                 if not page_loop_state.in_steering_window:

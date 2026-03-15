@@ -226,14 +226,24 @@ class SteeringHandler:
             return "unsafe"
 
         # Classify
-        classification = classify_steering(turn.transcript, safety_result)
-        logger.info(
-            "SteeringHandler: classified (session=%s, type=%s, confidence=%.2f, detail=%r)",
-            session_id,
-            classification.type,
-            classification.confidence,
-            classification.detail[:80] if classification.detail else None,
-        )
+        from app.services.adk_voice_service import TextTurn
+        if isinstance(turn, TextTurn):
+            # Bypass heuristics, force it through as an element reintroduction
+            classification = SteeringClassification(
+                type=CommandType.element_reintroduction,
+                confidence=1.0,
+                detail=turn.transcript.strip(),
+            )
+            logger.info("SteeringHandler: explicit text turn bypass (session=%s, text=%r)", session_id, turn.transcript[:80])
+        else:
+            classification = classify_steering(turn.transcript, safety_result)
+            logger.info(
+                "SteeringHandler: classified (session=%s, type=%s, confidence=%.2f, detail=%r)",
+                session_id,
+                classification.type,
+                classification.confidence,
+                classification.detail[:80] if classification.detail else None,
+            )
 
         # Ambiguous: ask one clarifying question, await one more turn
         if classification.type == "ambiguous":
