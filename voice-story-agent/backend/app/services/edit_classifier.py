@@ -102,6 +102,42 @@ def _build_classifier_prompt(
     )
 
 
+def _parse_gemini_json(raw: str) -> dict[str, Any]:
+    """Best-effort parse of Gemini's JSON output, handling common quirks."""
+    text = raw.strip()
+
+    # Strip markdown code fences (```json ... ``` or ``` ... ```)
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:json)?\s*", "", text)
+        text = re.sub(r"\s*```\s*$", "", text)
+
+    # Extract the outermost JSON object if surrounded by prose
+    brace_start = text.find("{")
+    if brace_start == -1:
+        raise ValueError("No JSON object found in response")
+    depth = 0
+    brace_end = -1
+    for i in range(brace_start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                brace_end = i
+                break
+    if brace_end == -1:
+        raise ValueError("Unbalanced braces in response")
+    text = text[brace_start : brace_end + 1]
+
+    # Remove trailing commas before } or ]
+    text = re.sub(r",\s*([}\]])", r"\1", text)
+
+    # Remove single-line comments
+    text = re.sub(r"//[^\n]*", "", text)
+
+    return json.loads(text)
+
+
 class EditClassifierService:
     """
     Classifies a user's post-generation edit instruction into a structured
@@ -189,9 +225,7 @@ class EditClassifierService:
                 ),
             )
             raw_text = response.text or ""
-            # Gemini occasionally emits trailing commas; strip them.
-            cleaned = re.sub(r",\s*([}\]])", r"\1", raw_text)
-            data: dict[str, Any] = json.loads(cleaned)
+            data: dict[str, Any] = _parse_gemini_json(raw_text)
         except Exception as exc:
             logger.error(
                 "EditClassifierService: Gemini call failed (session=%s): %s",
