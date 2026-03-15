@@ -36,7 +36,7 @@ from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Callable, Literal
 from google import genai
 from google.genai import types as genai_types
 
-from app.config import settings
+from app.config import settings, get_genai_live_client
 from app.exceptions import VoiceSessionError, VoiceSessionNotFoundError
 
 if TYPE_CHECKING:
@@ -67,13 +67,8 @@ class VoiceTurn:
 
 
 def _build_client() -> genai.Client:
-    """Return a Vertex AI–backed GenAI client from application settings."""
-    project_id = settings.require_gcp("VoiceSessionService")
-    return genai.Client(
-        vertexai=True,
-        project=project_id,
-        location=settings.GEMINI_LIVE_REGION,
-    )
+    """Return a GenAI client for Gemini Live API (Vertex AI, location=global)."""
+    return get_genai_live_client("VoiceSessionService")
 
 
 class VoiceSessionService:

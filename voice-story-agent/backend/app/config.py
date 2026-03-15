@@ -50,10 +50,11 @@ class Settings(BaseSettings):
     GEMINI_FLASH_MODEL: str = "gemini-2.5-flash"
 
     # ── Imagen ────────────────────────────────────────────────────────────
-    IMAGEN_MODEL: str = "imagen-4.0-generate-001"
+    IMAGEN_MODEL: str = "imagen-4.0-fast-generate-001"
 
     # ── Gemini Live (bidi-streaming voice) ────────────────────────────────
-    GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-001"
+    # Vertex AI Live API model (see https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/multimodal-live)
+    GEMINI_LIVE_MODEL: str = "gemini-2.0-flash-live-preview-04-09"
 
     # ── Cloud Text-to-Speech ──────────────────────────────────────────────
     TTS_VOICE_NAME: str = "en-US-Journey-F"
@@ -137,13 +138,18 @@ class Settings(BaseSettings):
 settings = Settings()
 
 
-def get_genai_client(service_name: str = "GenAI") -> "genai.Client":
+def get_genai_client(
+    service_name: str = "GenAI",
+    location: str | None = None,
+) -> "genai.Client":
     """
     Build a google.genai.Client using the best available credentials.
 
     Priority:
       1. GOOGLE_API_KEY set → AI Studio (generativelanguage) endpoint
       2. Otherwise          → Vertex AI endpoint (requires GCP_PROJECT_ID + ADC)
+
+    For Gemini Live API, pass location="global" (Vertex AI requires global for Live).
     """
     from google import genai  # lazy import to avoid circular deps
 
@@ -152,9 +158,17 @@ def get_genai_client(service_name: str = "GenAI") -> "genai.Client":
         return genai.Client(api_key=settings.GOOGLE_API_KEY)
 
     project_id = settings.require_gcp(service_name)
-    logger.info("%s: using Vertex AI endpoint (project=%s)", service_name, project_id)
+    loc = location if location is not None else settings.GCP_REGION
+    logger.info("%s: using Vertex AI endpoint (project=%s, location=%s)", service_name, project_id, loc)
     return genai.Client(
         vertexai=True,
         project=project_id,
-        location=settings.GCP_REGION,
+        location=loc,
     )
+
+
+def get_genai_live_client(service_name: str = "VoiceSessionService") -> "genai.Client":
+    """
+    Build a GenAI client configured for Gemini Live API (Vertex AI, location=global).
+    """
+    return get_genai_client(service_name, location=settings.GEMINI_LIVE_REGION)
