@@ -268,6 +268,53 @@ class StoryStreamService:
                 )
                 await asyncio.sleep(backoff_seconds)
 
+    async def generate_text_only(
+        self,
+        beat: str,
+        page_history: list[str],
+        bible: CharacterBible,
+        edit_instruction: str | None = None,
+    ) -> str | None:
+        """
+        Fallback: generate page text without an image using the standard
+        Flash model when the Flash Image stream returned no text.
+        """
+        client = self._get_client()
+        prompt = _build_prompt(beat, page_history, bible, edit_instruction)
+        max_attempts = 2
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = await client.aio.models.generate_content(
+                    model=settings.GEMINI_FLASH_MODEL,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=_SYSTEM_PROMPT,
+                        response_modalities=["TEXT"],
+                        temperature=0.7,
+                    ),
+                )
+                candidates = getattr(response, "candidates", None)
+                if not candidates:
+                    return None
+                content = getattr(candidates[0], "content", None)
+                if content is None:
+                    return None
+                parts_text: list[str] = []
+                for part in getattr(content, "parts", []):
+                    text = getattr(part, "text", None)
+                    if text:
+                        parts_text.append(text)
+                combined = "".join(parts_text).strip()
+                return combined if combined else None
+            except Exception as exc:
+                if attempt >= max_attempts or not self._is_retryable_error(exc):
+                    logger.warning(
+                        "StoryStreamService.generate_text_only failed: %s", exc,
+                    )
+                    return None
+                await asyncio.sleep(1.5)
+        return None
+
     async def generate_image_only(
         self,
         beat: str,

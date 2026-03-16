@@ -651,6 +651,58 @@ async def run_page_streamed(
 
     # -- Emit page_text_ready with full accumulated text --
     full_text = "".join(full_text_parts)
+
+    # -- Text-only fallback when Flash Image stream returned nothing --
+    if not full_text:
+        logger.warning(
+            "run_page_streamed: visual stream produced no text "
+            "(session=%s, page=%d); attempting text-only fallback",
+            session_id,
+            page_number,
+        )
+        try:
+            fallback_text = await asyncio.wait_for(
+                story_stream_svc.generate_text_only(
+                    beat=beat,
+                    page_history=page_history,
+                    bible=bible,
+                    edit_instruction=edit_instruction,
+                ),
+                timeout=20.0,
+            )
+            if fallback_text:
+                full_text = fallback_text
+                try:
+                    await emit(
+                        "page_text_chunk",
+                        page=page_number,
+                        delta=full_text,
+                    )
+                except Exception:
+                    pass
+                logger.info(
+                    "run_page_streamed: text-only fallback succeeded "
+                    "(session=%s, page=%d, len=%d)",
+                    session_id,
+                    page_number,
+                    len(full_text),
+                )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "run_page_streamed: text-only fallback timed out "
+                "(session=%s, page=%d)",
+                session_id,
+                page_number,
+            )
+        except Exception as exc:
+            logger.warning(
+                "run_page_streamed: text-only fallback failed "
+                "(session=%s, page=%d): %s",
+                session_id,
+                page_number,
+                exc,
+            )
+
     if full_text:
         page.text = full_text
         page.narration_script = full_text
