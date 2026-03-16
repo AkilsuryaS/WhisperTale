@@ -1,0 +1,180 @@
+<svg width="1200" height="820" viewBox="0 0 1200 820" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <style>
+    .bg { fill: #ffffff; }
+    .title { font: bold 28px 'Segoe UI', Arial, sans-serif; fill: #1a1a2e; }
+    .subtitle { font: 400 14px 'Segoe UI', Arial, sans-serif; fill: #6b7280; }
+    .boxLabel { font: bold 14px 'Segoe UI', Arial, sans-serif; fill: #ffffff; }
+    .boxSub { font: 400 12px 'Segoe UI', Arial, sans-serif; fill: rgba(255,255,255,0.85); }
+    .sectionLabel { font: bold 13px 'Segoe UI', Arial, sans-serif; fill: #6b7280; letter-spacing: 1.5px; }
+    .edgeLabel { font: 500 11px 'Segoe UI', Arial, sans-serif; fill: #4b5563; }
+    .arrow { stroke-width: 2; fill: none; }
+    .arrowHead { stroke-width: 2; }
+  </style>
+  <marker id="ah-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#3b82f6"/></marker>
+  <marker id="ah-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#f59e0b"/></marker>
+  <marker id="ah-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#10b981"/></marker>
+  <marker id="ah-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#8b5cf6"/></marker>
+</defs>
+
+<rect class="bg" width="1200" height="820" rx="0"/>
+
+<!-- Title -->
+<text x="600" y="42" text-anchor="middle" class="title">WhisperTale — System Architecture</text>
+<text x="600" y="64" text-anchor="middle" class="subtitle">Voice Story Agent for Children  |  Gemini Live Agent Challenge — Creative Storyteller</text>
+
+<!-- ========== ROW 1: USER + FRONTEND ========== -->
+<text x="60" y="110" class="sectionLabel">USER</text>
+
+<!-- Child Browser -->
+<rect x="60" y="125" width="180" height="80" rx="14" fill="#3b82f6"/>
+<text x="150" y="160" text-anchor="middle" class="boxLabel">Child (Browser)</text>
+<text x="150" y="178" text-anchor="middle" class="boxSub">Mic input + story playback</text>
+
+<!-- Arrow: Child → Frontend -->
+<line x1="240" y1="155" x2="300" y2="155" stroke="#3b82f6" class="arrow" marker-end="url(#ah-blue)"/>
+<line x1="300" y1="175" x2="240" y2="175" stroke="#3b82f6" class="arrow" marker-end="url(#ah-blue)"/>
+<text x="270" y="148" text-anchor="middle" class="edgeLabel">audio</text>
+<text x="270" y="192" text-anchor="middle" class="edgeLabel">pages</text>
+
+<!-- Next.js Frontend -->
+<rect x="300" y="125" width="220" height="80" rx="14" fill="#6366f1"/>
+<text x="410" y="155" text-anchor="middle" class="boxLabel">Next.js 14 Frontend</text>
+<text x="410" y="173" text-anchor="middle" class="boxSub">Hold-to-talk UI, storybook viewer</text>
+<text x="410" y="191" text-anchor="middle" class="boxSub">Firebase App Hosting</text>
+
+<!-- Arrow: Frontend → Backend -->
+<line x1="520" y1="165" x2="600" y2="165" stroke="#3b82f6" class="arrow" marker-end="url(#ah-blue)"/>
+<text x="560" y="158" text-anchor="middle" class="edgeLabel">WebSocket</text>
+<text x="560" y="180" text-anchor="middle" class="edgeLabel">+ REST</text>
+
+<!-- ========== ROW 1: BACKEND ========== -->
+<text x="600" y="110" class="sectionLabel">BACKEND (GOOGLE CLOUD RUN)</text>
+
+<rect x="600" y="125" width="540" height="80" rx="14" fill="#1e40af"/>
+<text x="870" y="152" text-anchor="middle" class="boxLabel">FastAPI Backend — Cloud Run</text>
+<text x="870" y="170" text-anchor="middle" class="boxSub">WebSocket handler  ·  Story orchestrator  ·  Safety layer  ·  REST API</text>
+<text x="870" y="188" text-anchor="middle" class="boxSub">Coordinates voice setup → story planning → page generation → edits</text>
+
+<!-- ========== SECTION LABEL ========== -->
+<text x="60" y="260" class="sectionLabel">GEMINI AI MODELS (GOOGLE GENAI SDK / ADK)</text>
+
+<!-- Gemini Live -->
+<rect x="60" y="280" width="230" height="100" rx="14" fill="#f59e0b"/>
+<text x="175" y="310" text-anchor="middle" style="font: bold 14px 'Segoe UI', Arial, sans-serif; fill: #1a1a2e;">Gemini Live API</text>
+<text x="175" y="330" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">gemini-2.0-flash-live-001</text>
+<text x="175" y="348" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">Bidi voice streaming via ADK</text>
+<text x="175" y="366" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">Real-time conversation + transcripts</text>
+
+<!-- Gemini 2.5 Pro -->
+<rect x="310" y="280" width="230" height="100" rx="14" fill="#f59e0b"/>
+<text x="425" y="310" text-anchor="middle" style="font: bold 14px 'Segoe UI', Arial, sans-serif; fill: #1a1a2e;">Gemini 2.5 Pro</text>
+<text x="425" y="330" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">Story arc planning (5 beats)</text>
+<text x="425" y="348" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">Page text generation</text>
+<text x="425" y="366" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">Character bible creation</text>
+
+<!-- Gemini 2.5 Flash -->
+<rect x="560" y="280" width="230" height="100" rx="14" fill="#f59e0b"/>
+<text x="675" y="310" text-anchor="middle" style="font: bold 14px 'Segoe UI', Arial, sans-serif; fill: #1a1a2e;">Gemini 2.5 Flash</text>
+<text x="675" y="330" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">Content safety checks</text>
+<text x="675" y="348" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">Edit classification + routing</text>
+<text x="675" y="366" text-anchor="middle" style="font: 400 12px 'Segoe UI', Arial, sans-serif; fill: #78350f;">Low-latency support tasks</text>
+
+<!-- ========== SECTION LABEL ========== -->
+<text x="60" y="430" class="sectionLabel">MEDIA GENERATION (GOOGLE CLOUD)</text>
+
+<!-- Imagen 4 -->
+<rect x="60" y="450" width="230" height="85" rx="14" fill="#ec4899"/>
+<text x="175" y="480" text-anchor="middle" class="boxLabel">Imagen 4 Fast</text>
+<text x="175" y="498" text-anchor="middle" class="boxSub">Per-page illustration generation</text>
+<text x="175" y="516" text-anchor="middle" class="boxSub">Imagen 3 fallback · Vertex AI</text>
+
+<!-- Cloud TTS -->
+<rect x="310" y="450" width="230" height="85" rx="14" fill="#ec4899"/>
+<text x="425" y="480" text-anchor="middle" class="boxLabel">Cloud Text-to-Speech</text>
+<text x="425" y="498" text-anchor="middle" class="boxSub">Per-page narration audio</text>
+<text x="425" y="516" text-anchor="middle" class="boxSub">Neural2 child-friendly voice</text>
+
+<!-- ========== SECTION LABEL ========== -->
+<text x="60" y="590" class="sectionLabel">DATA + STORAGE (GOOGLE CLOUD)</text>
+
+<!-- Firestore -->
+<rect x="60" y="610" width="220" height="85" rx="14" fill="#10b981"/>
+<text x="170" y="642" text-anchor="middle" class="boxLabel">Firestore</text>
+<text x="170" y="660" text-anchor="middle" class="boxSub">Sessions, pages, assets</text>
+<text x="170" y="678" text-anchor="middle" class="boxSub">Story state persistence</text>
+
+<!-- Cloud Storage -->
+<rect x="300" y="610" width="220" height="85" rx="14" fill="#10b981"/>
+<text x="410" y="642" text-anchor="middle" class="boxLabel">Cloud Storage (GCS)</text>
+<text x="410" y="660" text-anchor="middle" class="boxSub">Illustration PNGs</text>
+<text x="410" y="678" text-anchor="middle" class="boxSub">Narration audio + signed URLs</text>
+
+<!-- Cloud Logging -->
+<rect x="540" y="610" width="220" height="85" rx="14" fill="#10b981"/>
+<text x="650" y="642" text-anchor="middle" class="boxLabel">Cloud Logging</text>
+<text x="650" y="660" text-anchor="middle" class="boxSub">Structured session events</text>
+<text x="650" y="678" text-anchor="middle" class="boxSub">Page generation tracing</text>
+
+<!-- GitHub Actions -->
+<rect x="780" y="610" width="220" height="85" rx="14" fill="#8b5cf6"/>
+<text x="890" y="642" text-anchor="middle" class="boxLabel">GitHub Actions CI/CD</text>
+<text x="890" y="660" text-anchor="middle" class="boxSub">Auto-deploy to Cloud Run</text>
+<text x="890" y="678" text-anchor="middle" class="boxSub">Docker build + push</text>
+
+<!-- ========== ARROWS: Backend → Gemini Models ========== -->
+<line x1="700" y1="205" x2="175" y2="280" stroke="#f59e0b" class="arrow" marker-end="url(#ah-amber)"/>
+<text x="400" y="232" text-anchor="middle" class="edgeLabel">voice setup, transcripts, spoken Q&amp;A</text>
+
+<line x1="830" y1="205" x2="425" y2="280" stroke="#f59e0b" class="arrow" marker-end="url(#ah-amber)"/>
+<text x="660" y="250" text-anchor="middle" class="edgeLabel">story brief, character bible, page text</text>
+
+<line x1="960" y1="205" x2="675" y2="280" stroke="#f59e0b" class="arrow" marker-end="url(#ah-amber)"/>
+<text x="870" y="250" text-anchor="middle" class="edgeLabel">safety, edit classification</text>
+
+<!-- ========== ARROWS: Backend → Media Gen ========== -->
+<line x1="700" y1="205" x2="175" y2="450" stroke="#ec4899" class="arrow" marker-end="url(#ah-purple)" stroke="#ec4899"/>
+<text x="100" y="410" text-anchor="middle" class="edgeLabel">illustration prompts</text>
+
+<line x1="780" y1="205" x2="425" y2="450" stroke="#ec4899" class="arrow" marker-end="url(#ah-purple)" stroke="#ec4899"/>
+<text x="370" y="410" text-anchor="middle" class="edgeLabel">narration script</text>
+
+<!-- ========== ARROWS: Backend → Data ========== -->
+<line x1="750" y1="205" x2="170" y2="610" stroke="#10b981" class="arrow" marker-end="url(#ah-green)"/>
+<text x="150" y="570" text-anchor="middle" class="edgeLabel">read/write story state</text>
+
+<line x1="850" y1="205" x2="410" y2="610" stroke="#10b981" class="arrow" marker-end="url(#ah-green)"/>
+<text x="390" y="570" text-anchor="middle" class="edgeLabel">store images + audio</text>
+
+<line x1="950" y1="205" x2="650" y2="610" stroke="#10b981" class="arrow" marker-end="url(#ah-green)"/>
+<text x="630" y="570" text-anchor="middle" class="edgeLabel">structured logs</text>
+
+<!-- Arrow: CI/CD → Backend -->
+<line x1="890" y1="610" x2="1050" y2="205" stroke="#8b5cf6" class="arrow" marker-end="url(#ah-purple)"/>
+<text x="1010" y="430" text-anchor="middle" class="edgeLabel">deploy</text>
+
+<!-- ========== FLOW SUMMARY ========== -->
+<rect x="60" y="740" width="1080" height="55" rx="12" fill="#f3f4f6"/>
+<text x="600" y="765" text-anchor="middle" style="font: 600 13px 'Segoe UI', Arial, sans-serif; fill: #374151;">End-to-end: Child speaks → Frontend streams audio via WebSocket → Cloud Run orchestrates Gemini + Imagen + TTS →</text>
+<text x="600" y="783" text-anchor="middle" style="font: 600 13px 'Segoe UI', Arial, sans-serif; fill: #374151;">Assets stored in GCS + state in Firestore → Frontend renders the illustrated storybook with narration in real time</text>
+
+<!-- Color legend -->
+<rect x="820" y="280" width="12" height="12" rx="3" fill="#f59e0b"/>
+<text x="838" y="291" style="font: 400 11px 'Segoe UI', Arial, sans-serif; fill: #6b7280;">Gemini AI Models</text>
+
+<rect x="820" y="300" width="12" height="12" rx="3" fill="#ec4899"/>
+<text x="838" y="311" style="font: 400 11px 'Segoe UI', Arial, sans-serif; fill: #6b7280;">Media Generation</text>
+
+<rect x="820" y="320" width="12" height="12" rx="3" fill="#10b981"/>
+<text x="838" y="331" style="font: 400 11px 'Segoe UI', Arial, sans-serif; fill: #6b7280;">Data + Storage</text>
+
+<rect x="820" y="340" width="12" height="12" rx="3" fill="#3b82f6"/>
+<text x="838" y="351" style="font: 400 11px 'Segoe UI', Arial, sans-serif; fill: #6b7280;">User / Frontend</text>
+
+<rect x="820" y="360" width="12" height="12" rx="3" fill="#1e40af"/>
+<text x="838" y="371" style="font: 400 11px 'Segoe UI', Arial, sans-serif; fill: #6b7280;">Backend (Cloud Run)</text>
+
+<rect x="820" y="380" width="12" height="12" rx="3" fill="#8b5cf6"/>
+<text x="838" y="391" style="font: 400 11px 'Segoe UI', Arial, sans-serif; fill: #6b7280;">CI/CD</text>
+
+</svg>

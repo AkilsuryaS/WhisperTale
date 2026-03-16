@@ -19,13 +19,7 @@ Key highlights:
 
 ## Architecture
 
-![Architecture Diagram](architecture-diagram.png)
-
----
-
-## Architecture Diagram
-
-![WhisperTale System Architecture](architecture-diagram.png)
+![WhisperTale System Architecture](../architecture-diagram.svg)
 
 ---
 

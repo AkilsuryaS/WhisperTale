@@ -18,13 +18,9 @@ Key highlights:
 
 ## Architecture
 
-![Architecture Diagram](voice-story-agent/architecture-diagram.png)
+This diagram highlights the full judge-facing system flow, including where each Gemini capability is used.
 
----
-
-## Architecture Diagram
-
-![WhisperTale System Architecture](voice-story-agent/architecture-diagram.png)
+![WhisperTale System Architecture](architecture-diagram.svg)
 
 ---
 
