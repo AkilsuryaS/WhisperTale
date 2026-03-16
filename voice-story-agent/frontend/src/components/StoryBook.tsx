@@ -52,6 +52,12 @@ export interface StoryBookProps {
   onEditRequest?: (instruction: string, pageNumber: number) => void;
   /** True while any edit is in progress. */
   isEditing?: boolean;
+  /** Currently visible/selected page number. If omitted, StoryBook manages it internally. */
+  activePage?: number;
+  /** Called when the visible page changes due to user scrolling. */
+  onActivePageChange?: (pageNumber: number) => void;
+  /** Page number the carousel should follow while generation progresses. */
+  focusPage?: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,14 +122,19 @@ export function StoryBook({
   editingPages,
   onEditRequest,
   isEditing = false,
+  activePage: controlledActivePage,
+  onActivePageChange,
+  focusPage = null,
 }: StoryBookProps) {
   // Build sorted list of page entries (1→5 order).
   const sortedPages = Array.from(pages.entries()).sort(([a], [b]) => a - b);
 
   // Track which page is visible in the carousel for audio gating.
-  const [activePage, setActivePage] = useState<number>(1);
+  const [uncontrolledActivePage, setUncontrolledActivePage] = useState<number>(1);
+  const activePage = controlledActivePage ?? uncontrolledActivePage;
   const observerRef = useRef<IntersectionObserver | null>(null);
   const slideRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const holdSlideRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -133,7 +144,12 @@ export function StoryBook({
             const page = Number(
               (entry.target as HTMLElement).getAttribute("data-page")
             );
-            if (page) setActivePage(page);
+            if (page) {
+              onActivePageChange?.(page);
+              if (controlledActivePage === undefined) {
+                setUncontrolledActivePage(page);
+              }
+            }
           }
         }
       },
@@ -148,7 +164,7 @@ export function StoryBook({
     return () => {
       observerRef.current?.disconnect();
     };
-  }, []);
+  }, [controlledActivePage, onActivePageChange]);
 
   // When new pages arrive, start observing their slide elements.
   useEffect(() => {
@@ -157,6 +173,28 @@ export function StoryBook({
       if (el) observerRef.current.observe(el);
     }
   }, [sortedPages.length]);
+
+  useEffect(() => {
+    if (!focusPage) return;
+
+    const targetSlide = slideRefs.current.get(focusPage);
+    if (targetSlide) {
+      targetSlide.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+      return;
+    }
+
+    if (isGenerating && holdSlideRef.current) {
+      holdSlideRef.current.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [focusPage, isGenerating, sortedPages.length]);
 
   const registerSlide = (pageNum: number, el: HTMLDivElement | null) => {
     if (el) {
@@ -215,6 +253,7 @@ export function StoryBook({
         {isGenerating && (
           <div
             data-testid="story-book-hold-slide"
+            ref={holdSlideRef}
             className="flex w-full flex-shrink-0 snap-center items-center justify-center"
           >
             <HoldAnimation isGenerating={isGenerating} />

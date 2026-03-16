@@ -83,6 +83,11 @@ export interface UseVoiceSessionOptions {
    * Use this to call `story.hydrate(session)` in the page component.
    */
   onReconnectHydrate?: (session: HydrateSession) => void;
+  /**
+   * Optional predicate that decides whether an inbound live PCM chunk should be
+   * played. When omitted, all chunks are played.
+   */
+  shouldPlayAudioChunk?: () => boolean;
 }
 
 export interface UseVoiceSessionReturn {
@@ -175,6 +180,7 @@ export function useVoiceSession(
       | (new (stream: MediaStream, opts?: MediaRecorderOptions) => MediaRecorder)
       | undefined,
     onReconnectHydrate,
+    shouldPlayAudioChunk,
   } = opts;
 
   // Lazily resolved so jsdom environments (which lack global fetch) don't fail
@@ -217,6 +223,10 @@ export function useVoiceSession(
   // Stable ref for the hydrate callback.
   const onReconnectHydrateRef = useRef(onReconnectHydrate);
   useEffect(() => { onReconnectHydrateRef.current = onReconnectHydrate; }, [onReconnectHydrate]);
+  const shouldPlayAudioChunkRef = useRef(shouldPlayAudioChunk);
+  useEffect(() => {
+    shouldPlayAudioChunkRef.current = shouldPlayAudioChunk;
+  }, [shouldPlayAudioChunk]);
 
   // ---------------------------------------------------------------------------
   // Internal helpers
@@ -464,6 +474,10 @@ export function useVoiceSession(
       onAudioChunk: (pcm: ArrayBuffer) => {
         const ctx = audioContextRef.current;
         if (!ctx) return;
+        if (shouldPlayAudioChunkRef.current && !shouldPlayAudioChunkRef.current()) {
+          audioPlaybackCursorRef.current = ctx.currentTime;
+          return;
+        }
         const playChunk = () => {
           // Gemini Live emits 16-bit signed little-endian PCM at 24 kHz mono.
           const int16 = new Int16Array(pcm);

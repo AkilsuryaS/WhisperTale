@@ -38,6 +38,7 @@ import type {
   SafetyRewriteEvent,
   SafetyAcceptedEvent,
   PageGeneratingEvent,
+  PageCompleteEvent,
   TranscriptEvent,
   EditStartedEvent,
   EditCompleteEvent,
@@ -73,8 +74,15 @@ function SmallMicIcon() {
 // ---------------------------------------------------------------------------
 
 export default function StoryAppPage() {
+  const totalPages = 5;
+  const [activePage, setActivePage] = useState(1);
+  const [focusPage, setFocusPage] = useState<number | null>(null);
+  const [currentGeneratingPage, setCurrentGeneratingPage] = useState<number | null>(null);
   // ── Voice session lifecycle ─────────────────────────────────────────────
-  const voice = useVoiceSession();
+  const voice = useVoiceSession({
+    shouldPlayAudioChunk: () =>
+      currentGeneratingPage === null || activePage === currentGeneratingPage,
+  });
 
   // Unlock browser autoplay policy on the first user gesture (mic tap).
   // A silent play()+pause() on this element marks the page as having had
@@ -148,20 +156,32 @@ export default function StoryAppPage() {
       setStoryComplete(false);
       setSafetyRewrite(null);
       setSafetyAccepted(null);
+      setCurrentGeneratingPage(null);
+      setFocusPage(null);
+      setActivePage(1);
       return;
     }
 
-    client.on("page_generating", (_evt: PageGeneratingEvent) => {
+    client.on("page_generating", (evt: PageGeneratingEvent) => {
       setIsGenerating(true);
       setIsProcessing(false);
+      setCurrentGeneratingPage(evt.page);
+      setFocusPage(evt.page);
+      setActivePage(evt.page);
     });
-    client.on("page_complete", () => {
+    client.on("page_complete", (evt: PageCompleteEvent) => {
       setIsGenerating(false);
+      setCurrentGeneratingPage(null);
+      setFocusPage(evt.page);
+      setActivePage(evt.page);
     });
     client.on("story_complete", () => {
       setStoryComplete(true);
       setIsGenerating(false);
       setIsProcessing(false);
+      setCurrentGeneratingPage(null);
+      setFocusPage(totalPages);
+      setActivePage(totalPages);
     });
     client.on("transcript", (_evt: TranscriptEvent) => {
       setIsProcessing(false);
@@ -192,7 +212,7 @@ export default function StoryAppPage() {
       console.warn("[StoryAppPage] edit failed:", _evt.error);
       showEditToast("Couldn\u2019t apply that change. Try again.", "error");
     });
-  }, [voice.wsClient, showEditToast]);
+  }, [voice.wsClient, showEditToast, totalPages]);
 
   // If the edit state clears (either from edit_complete, edit_failed, or
   // the 3-minute timeout in useStoryState) while the toast is still "info",
@@ -252,9 +272,6 @@ export default function StoryAppPage() {
     },
     [story]
   );
-
-  // ── Derived state ────────────────────────────────────────────────────────
-  const totalPages = 5;
 
   const partialCaption: PartialCaption | null = useMemo(() => {
     if (!voice.isListening || !voice.liveTranscript) return null;
@@ -412,6 +429,9 @@ export default function StoryAppPage() {
           editingPages={story.editingPages}
           onEditRequest={handleEditRequest}
           isEditing={story.isEditing}
+          activePage={activePage}
+          onActivePageChange={setActivePage}
+          focusPage={focusPage}
         />
       </div>
 
