@@ -137,7 +137,7 @@ class StoryStreamService:
 
     def _get_client(self) -> genai.Client:
         if self._client is None:
-            self._client = get_genai_client("StoryStreamService")
+            self._client = get_genai_client("StoryStreamService", location="global")
         return self._client
 
     async def generate_page_stream(

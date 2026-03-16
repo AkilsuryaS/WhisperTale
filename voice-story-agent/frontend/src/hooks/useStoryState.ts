@@ -31,6 +31,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { WsClient } from "@/lib/wsClient";
 import type {
+  PageTextChunkEvent,
   PageTextReadyEvent,
   PageImageReadyEvent,
   PageAudioReadyEvent,
@@ -188,6 +189,19 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
   // ---------------------------------------------------------------------------
   // Event handlers (stable references via useCallback)
   // ---------------------------------------------------------------------------
+
+  const handlePageTextChunk = useCallback((evt: PageTextChunkEvent) => {
+    setPages((prev) => {
+      const next = new Map(prev);
+      const existing = getOrMake(next, evt.page);
+      next.set(evt.page, {
+        ...existing,
+        text: (existing.text ?? "") + evt.delta,
+        status: existing.status === "pending" ? "text_ready" : existing.status,
+      });
+      return next;
+    });
+  }, []);
 
   const handlePageTextReady = useCallback((evt: PageTextReadyEvent) => {
     setPages((prev) => {
@@ -373,6 +387,7 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
 
     if (!client) return;
 
+    client.on("page_text_chunk", handlePageTextChunk);
     client.on("page_text_ready", handlePageTextReady);
     client.on("page_image_ready", handlePageImageReady);
     client.on("page_audio_ready", handlePageAudioReady);
@@ -390,6 +405,7 @@ export function useStoryState(client: WsClient | null): UseStoryStateReturn {
     client.on("edit_failed", handleEditFailed);
   }, [
     client,
+    handlePageTextChunk,
     handlePageTextReady,
     handlePageImageReady,
     handlePageAudioReady,
