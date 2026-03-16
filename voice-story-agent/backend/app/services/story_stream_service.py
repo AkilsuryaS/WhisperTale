@@ -18,6 +18,7 @@ as they arrive from the model.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from typing import AsyncIterator, Union
@@ -140,6 +141,18 @@ class StoryStreamService:
             self._client = get_genai_client("StoryStreamService", location="global")
         return self._client
 
+    @staticmethod
+    def _is_retryable_error(exc: Exception) -> bool:
+        msg = str(exc).upper()
+        return (
+            "RESOURCE_EXHAUSTED" in msg
+            or "429" in msg
+            or "UNAVAILABLE" in msg
+            or "503" in msg
+            or "DEADLINE_EXCEEDED" in msg
+            or "504" in msg
+        )
+
     async def generate_page_stream(
         self,
         beat: str,
@@ -155,32 +168,103 @@ class StoryStreamService:
         """
         client = self._get_client()
         prompt = _build_prompt(beat, page_history, bible)
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = await client.aio.models.generate_content_stream(
+                    model=settings.GEMINI_FLASH_IMAGE_MODEL,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=_SYSTEM_PROMPT,
+                        response_modalities=["TEXT", "IMAGE"],
+                        temperature=0.7,
+                    ),
+                )
 
-        response = await client.aio.models.generate_content_stream(
-            model=settings.GEMINI_FLASH_IMAGE_MODEL,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                system_instruction=_SYSTEM_PROMPT,
-                response_modalities=["TEXT", "IMAGE"],
-                temperature=0.7,
-            ),
+                async for chunk in response:
+                    candidates = getattr(chunk, "candidates", None)
+                    if not candidates:
+                        continue
+
+                    # Keep text from primary candidate to avoid duplicate prose,
+                    # but accept image parts from any candidate because some
+                    # streamed responses place IMAGE in a non-primary candidate.
+                    for candidate_index, candidate in enumerate(candidates):
+                        content = getattr(candidate, "content", None)
+                        if content is None:
+                            continue
+                        for part in getattr(content, "parts", []):
+                            part_text = getattr(part, "text", None)
+                            if part_text and candidate_index == 0:
+                                yield TextChunk(text=part_text)
+
+                            inline_data = getattr(part, "inline_data", None)
+                            if inline_data is not None:
+                                data = getattr(inline_data, "data", None)
+                                mime = getattr(inline_data, "mime_type", "image/png")
+                                if data:
+                                    yield ImageChunk(data=data, mime_type=mime or "image/png")
+                return
+            except Exception as exc:
+                if attempt >= max_attempts or not self._is_retryable_error(exc):
+                    raise
+                backoff_seconds = float(2 ** (attempt - 1))
+                logger.warning(
+                    "StoryStreamService.generate_page_stream attempt %d/%d failed; retrying in %.1fs: %s",
+                    attempt,
+                    max_attempts,
+                    backoff_seconds,
+                    exc,
+                )
+                await asyncio.sleep(backoff_seconds)
+
+    async def generate_image_only(
+        self,
+        beat: str,
+        page_history: list[str],
+        bible: CharacterBible,
+        page_text: str,
+    ) -> ImageChunk | None:
+        """
+        Best-effort fallback: request a single illustration when the streamed call
+        returns text but no inline image part.
+        """
+        client = self._get_client()
+        prompt = (
+            _build_prompt(beat, page_history, bible)
+            + "\n\nPAGE TEXT TO ILLUSTRATE:\n"
+            + page_text
+            + "\n\nGenerate exactly one image for this page."
         )
-
-        async for chunk in response:
-            candidates = getattr(chunk, "candidates", None)
-            if not candidates:
-                continue
-            content = getattr(candidates[0], "content", None)
-            if content is None:
-                continue
-            for part in getattr(content, "parts", []):
-                part_text = getattr(part, "text", None)
-                if part_text:
-                    yield TextChunk(text=part_text)
-
-                inline_data = getattr(part, "inline_data", None)
-                if inline_data is not None:
+        max_attempts = 2
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = await client.aio.models.generate_content(
+                    model=settings.GEMINI_FLASH_IMAGE_MODEL,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=_SYSTEM_PROMPT,
+                        response_modalities=["IMAGE"],
+                        temperature=0.7,
+                    ),
+                )
+                candidates = getattr(response, "candidates", None)
+                if not candidates:
+                    return None
+                content = getattr(candidates[0], "content", None)
+                if content is None:
+                    return None
+                for part in getattr(content, "parts", []):
+                    inline_data = getattr(part, "inline_data", None)
+                    if inline_data is None:
+                        continue
                     data = getattr(inline_data, "data", None)
                     mime = getattr(inline_data, "mime_type", "image/png")
                     if data:
-                        yield ImageChunk(data=data, mime_type=mime or "image/png")
+                        return ImageChunk(data=data, mime_type=mime or "image/png")
+                return None
+            except Exception as exc:
+                if attempt >= max_attempts or not self._is_retryable_error(exc):
+                    raise
+                await asyncio.sleep(1.5)
+        return None

@@ -1,0 +1,3250 @@
+[
+  {
+    "httpRequest": {
+      "latency": "0.148303199s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://voice-story-ui--whispertale-dev.us-east4.hosted.app/",
+      "remoteIp": "2600:8800:290:6300:5ccc:a42b:162b:f815",
+      "requestMethod": "GET",
+      "requestSize": "857",
+      "requestUrl": "https://voice-story-backend-813185030273.us-central1.run.app/sessions/f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "responseSize": "1949",
+      "serverIp": "2600:1901:81d4:200::",
+      "status": 200,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+    },
+    "insertId": "69b85ce2000480f85a597e10",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-03-16T19:41:22.407805732Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "dd484f883585e4f1",
+    "timestamp": "2026-03-16T19:41:22.144890Z",
+    "trace": "projects/whispertale-dev/traces/f9d756e4cc4de25d0e22bda8db16db42"
+  },
+  {
+    "insertId": "69b85ce20000d50cc19262f5",
+    "jsonPayload": {
+      "command": "session_start",
+      "event_type": "voice_command_applied",
+      "logger": "app.websocket.story_ws",
+      "message": "voice command received and applied: session_start",
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:41:22.056248+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:41:22.074782220Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:41:22.054540Z"
+  },
+  {
+    "insertId": "69b85ce20000d4fbf000d043",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "VoiceSession opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:41:22.056077+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:41:22.074782220Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:41:22.054523Z"
+  },
+  {
+    "insertId": "69b85ce1000be1ecf4f8285d",
+    "jsonPayload": {
+      "event_type": "ws_connect",
+      "logger": "app.websocket.story_ws",
+      "message": "WebSocket connected",
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "session_status": "complete",
+      "timestamp": "2026-03-16T19:41:21.780238+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:41:22.074782220Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:41:21.778732Z"
+  },
+  {
+    "insertId": "69b85ce1000b08676244251e",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:41:21.744660942Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     connection open",
+    "timestamp": "2026-03-16T19:41:21.723047Z"
+  },
+  {
+    "insertId": "69b85ce1000afcf92153de06",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:41:21.744660942Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     ('169.254.169.126', 40822) - \"WebSocket /ws/story/f0eeeea2-cd3b-4d76-8cae-848e0da7dddb?token=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb\" [accepted]",
+    "timestamp": "2026-03-16T19:41:21.720121Z"
+  },
+  {
+    "insertId": "69b85ce00006307bfac2d67f",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:41:20.413209865Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     connection closed",
+    "timestamp": "2026-03-16T19:41:20.405627Z"
+  },
+  {
+    "insertId": "69b85ce000062e896626d5df",
+    "jsonPayload": {
+      "event_type": "ws_disconnect",
+      "logger": "app.websocket.story_ws",
+      "message": "WebSocket disconnected",
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:41:20.406778+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:41:20.743723544Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:41:20.405129Z"
+  },
+  {
+    "insertId": "69b85ce000062e3df86a9292",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "VoiceSession closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:41:20.406626+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:41:20.743723544Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:41:20.405053Z"
+  },
+  {
+    "insertId": "69b85ce000062beb0cb3d7c4",
+    "jsonPayload": {
+      "logger": "app.websocket.story_ws",
+      "message": "WS disconnect message (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, code=1006)",
+      "timestamp": "2026-03-16T19:41:20.405934+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:41:20.412023518Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:41:20.404459Z"
+  },
+  {
+    "insertId": "69b85ca00007a7b19ee88c11",
+    "jsonPayload": {
+      "audio_failed": false,
+      "duration_ms": 22069,
+      "event_type": "page_generation_complete",
+      "illustration_failed": true,
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation complete",
+      "page_number": 5,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:40:16.501498+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:40:16.583322256Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:40:16.501681Z"
+  },
+  {
+    "insertId": "69b85ca000072e762c4d4c21",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:40:16.470517+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:40:16.583322256Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:40:16.470646Z"
+  },
+  {
+    "insertId": "69b85c9f00048b55597e90ac",
+    "jsonPayload": {
+      "logger": "app.websocket.page_orchestrator",
+      "message": "run_page_streamed: visual stream failed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=5): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.', 'status': 'RESOURCE_EXHAUSTED'}}",
+      "timestamp": "2026-03-16T19:40:15.297945+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:40:15.583889892Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "ERROR",
+    "timestamp": "2026-03-16T19:40:15.297813Z"
+  },
+  {
+    "insertId": "69b85c9f000488d458c429ff",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \"HTTP/1.1 429 Too Many Requests\"",
+      "timestamp": "2026-03-16T19:40:15.297199+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:40:15.583889892Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:40:15.297172Z"
+  },
+  {
+    "insertId": "69b85c9800072415ddb4ad19",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:40:08.468901+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:40:08.590069930Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:40:08.467989Z"
+  },
+  {
+    "insertId": "69b85c9600071f11f29266d9",
+    "jsonPayload": {
+      "logger": "app.services.story_stream_service",
+      "message": "StoryStreamService.generate_page_stream attempt 2/3 failed; retrying in 2.0s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.', 'status': 'RESOURCE_EXHAUSTED'}}",
+      "timestamp": "2026-03-16T19:40:06.468072+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:40:06.591346008Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "WARNING",
+    "timestamp": "2026-03-16T19:40:06.466705Z"
+  },
+  {
+    "insertId": "69b85c9600071c169fa846cb",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \"HTTP/1.1 429 Too Many Requests\"",
+      "timestamp": "2026-03-16T19:40:06.467276+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:40:06.591346008Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:40:06.465942Z"
+  },
+  {
+    "insertId": "69b85c90000cc0b8d655e2ca",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:40:00.836578+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:40:00.932892256Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:40:00.835768Z"
+  },
+  {
+    "insertId": "69b85c8f000cbbe342abaf11",
+    "jsonPayload": {
+      "logger": "app.services.story_stream_service",
+      "message": "StoryStreamService.generate_page_stream attempt 1/3 failed; retrying in 1.0s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.', 'status': 'RESOURCE_EXHAUSTED'}}",
+      "timestamp": "2026-03-16T19:39:59.835357+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:59.942745880Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "WARNING",
+    "timestamp": "2026-03-16T19:39:59.834531Z"
+  },
+  {
+    "insertId": "69b85c8f000cb91d9dd0fdcb",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \"HTTP/1.1 429 Too Many Requests\"",
+      "timestamp": "2026-03-16T19:39:59.834621+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:59.942745880Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:59.833821Z"
+  },
+  {
+    "insertId": "69b85c8a00094d39f943b71c",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:39:54.610665+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:54.935631846Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:54.609593Z"
+  },
+  {
+    "insertId": "69b85c8a00094bee63e447a4",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:39:54.610175+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:54.935631846Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:54.609262Z"
+  },
+  {
+    "insertId": "69b85c8a000694921c871000",
+    "jsonPayload": {
+      "event_type": "page_generation_started",
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation started",
+      "page_number": 5,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:39:54.431973+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:54.602141658Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:54.431250Z"
+  },
+  {
+    "insertId": "69b85c8a0005861921770b74",
+    "jsonPayload": {
+      "logger": "app.websocket.steering_handler",
+      "message": "SteeringHandler: window closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=4, reason=timeout)",
+      "timestamp": "2026-03-16T19:39:54.362570+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:54.602141658Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:54.362009Z"
+  },
+  {
+    "insertId": "69b85c80000585519b821b36",
+    "jsonPayload": {
+      "logger": "app.websocket.steering_handler",
+      "message": "SteeringHandler: window opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=4, timeout=10s)",
+      "timestamp": "2026-03-16T19:39:44.362686+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:44.628185632Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:44.361809Z"
+  },
+  {
+    "insertId": "69b85c800005849462dbd0a1",
+    "jsonPayload": {
+      "logger": "app.websocket.story_ws",
+      "message": "_page_generation_loop: steering window opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=4, user_interrupt=False, timeout=10s)",
+      "timestamp": "2026-03-16T19:39:44.362394+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:44.628185632Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:44.361620Z"
+  },
+  {
+    "insertId": "69b85c800003e7beff35d87c",
+    "jsonPayload": {
+      "audio_failed": false,
+      "duration_ms": 37466,
+      "event_type": "page_generation_complete",
+      "illustration_failed": false,
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation complete",
+      "page_number": 4,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:39:44.256635+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:44.278241471Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:44.255934Z"
+  },
+  {
+    "insertId": "69b85c800002a5133d10538f",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:39:44.173914+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:44.278241471Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:44.173331Z"
+  },
+  {
+    "insertId": "69b85c7a0006343a99754f91",
+    "jsonPayload": {
+      "asset_type": "illustration",
+      "event_type": "page_asset_ready",
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page illustration generated (streamed)",
+      "page_number": 4,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:39:38.407789+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:38.617304285Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:38.406586Z"
+  },
+  {
+    "insertId": "69b85c7a0004c21187740946",
+    "jsonPayload": {
+      "logger": "app.services.media_persistence",
+      "message": "MediaPersistenceService: falling back to IAM signing (reason: AttributeError: you need a private key to sign credentials.the credentials you are currently using <class 'google.auth.compute_engine.credentials.Credentials'> just contains a token. see https://googleapis.dev/python/google-api-core/latest/auth.html#setting-up-a-service-account for more details.)",
+      "timestamp": "2026-03-16T19:39:38.313025+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:38.617304285Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:38.311825Z"
+  },
+  {
+    "insertId": "69b85c6a0000d229a0f38d04",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:39:22.053964+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:22.299772626Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:22.053801Z"
+  },
+  {
+    "insertId": "69b85c620001eb1707232d35",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:39:14.126459+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:14.307663492Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:14.125719Z"
+  },
+  {
+    "insertId": "69b85c610001e8d9b0d53cb8",
+    "jsonPayload": {
+      "logger": "app.services.story_stream_service",
+      "message": "StoryStreamService.generate_page_stream attempt 1/3 failed; retrying in 1.0s: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429 for more details.', 'status': 'RESOURCE_EXHAUSTED'}}",
+      "timestamp": "2026-03-16T19:39:13.126616+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:13.307455575Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "WARNING",
+    "timestamp": "2026-03-16T19:39:13.125145Z"
+  },
+  {
+    "insertId": "69b85c610001e64bb9257600",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \"HTTP/1.1 429 Too Many Requests\"",
+      "timestamp": "2026-03-16T19:39:13.125897+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:13.307455575Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:13.124491Z"
+  },
+  {
+    "insertId": "69b85c5b00007a485e56738b",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:39:07.032559+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:07.312788060Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:07.031304Z"
+  },
+  {
+    "insertId": "69b85c5b00007896448daea1",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:39:07.031125+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:07.312788060Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:07.030870Z"
+  },
+  {
+    "insertId": "69b85c5a000c09e7db118a5b",
+    "jsonPayload": {
+      "event_type": "page_generation_started",
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation started",
+      "page_number": 4,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:39:06.790182+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:06.982675934Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:06.788967Z"
+  },
+  {
+    "insertId": "69b85c5a000a7c3f3048542d",
+    "jsonPayload": {
+      "logger": "app.websocket.steering_handler",
+      "message": "SteeringHandler: window closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=3, reason=timeout)",
+      "timestamp": "2026-03-16T19:39:06.688348+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:39:06.982675934Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:39:06.687167Z"
+  },
+  {
+    "insertId": "69b85c50000a7650b57ece8b",
+    "jsonPayload": {
+      "logger": "app.websocket.steering_handler",
+      "message": "SteeringHandler: window opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=3, timeout=10s)",
+      "timestamp": "2026-03-16T19:38:56.687022+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:56.989490944Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:56.685648Z"
+  },
+  {
+    "insertId": "69b85c50000a75a1e9ae811c",
+    "jsonPayload": {
+      "logger": "app.websocket.story_ws",
+      "message": "_page_generation_loop: steering window opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=3, user_interrupt=False, timeout=10s)",
+      "timestamp": "2026-03-16T19:38:56.686759+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:56.989490944Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:56.685473Z"
+  },
+  {
+    "insertId": "69b85c500008ca3d6edb708c",
+    "jsonPayload": {
+      "audio_failed": false,
+      "duration_ms": 31110,
+      "event_type": "page_generation_complete",
+      "illustration_failed": true,
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation complete",
+      "page_number": 3,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:38:56.577309+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:56.656161973Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:56.576061Z"
+  },
+  {
+    "insertId": "69b85c5000084258526da330",
+    "jsonPayload": {
+      "logger": "app.websocket.page_orchestrator",
+      "message": "run_page_streamed: fallback image request failed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=3): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource has been exhausted (e.g. check quota).', 'status': 'RESOURCE_EXHAUSTED'}}",
+      "timestamp": "2026-03-16T19:38:56.542586+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:56.656161973Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "WARNING",
+    "timestamp": "2026-03-16T19:38:56.541272Z"
+  },
+  {
+    "insertId": "69b85c5000083db85ca34b48",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:generateContent \"HTTP/1.1 429 Too Many Requests\"",
+      "timestamp": "2026-03-16T19:38:56.541359+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:56.656161973Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:56.540088Z"
+  },
+  {
+    "insertId": "69b85c45000a71c92ffe05fe",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:38:45.685355+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:46.001641764Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:45.684489Z"
+  },
+  {
+    "insertId": "69b85c440002c92f34ea8394",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:generateContent \"HTTP/1.1 429 Too Many Requests\"",
+      "timestamp": "2026-03-16T19:38:44.183289+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:44.334261098Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:44.182575Z"
+  },
+  {
+    "insertId": "69b85c390002cb8bc0d5cd79",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:38:33.183775+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:33.348928157Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:33.183179Z"
+  },
+  {
+    "insertId": "69b85c39000251aca5f781b5",
+    "jsonPayload": {
+      "logger": "app.websocket.page_orchestrator",
+      "message": "run_page_streamed: no image produced by model (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=3)",
+      "timestamp": "2026-03-16T19:38:33.152853+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:33.348928157Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "WARNING",
+    "timestamp": "2026-03-16T19:38:33.151980Z"
+  },
+  {
+    "insertId": "69b85c39000251757b769a11",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:38:33.152704+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:33.348928157Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:33.151925Z"
+  },
+  {
+    "insertId": "69b85c320002652155677798",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:38:26.157432+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:26.352753886Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:26.156961Z"
+  },
+  {
+    "insertId": "69b85c31000a06359dcfff11",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:38:25.657623+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:25.685047336Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:25.656949Z"
+  },
+  {
+    "insertId": "69b85c31000a04c6eb6f6894",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:38:25.657157+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:25.685047336Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:25.656582Z"
+  },
+  {
+    "insertId": "69b85c3100071dee6a4a5667",
+    "jsonPayload": {
+      "event_type": "page_generation_started",
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation started",
+      "page_number": 3,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:38:25.467061+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:25.685047336Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:25.466414Z"
+  },
+  {
+    "insertId": "69b85c310005e43a7756f5b8",
+    "jsonPayload": {
+      "logger": "app.websocket.steering_handler",
+      "message": "SteeringHandler: window closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=2, reason=timeout)",
+      "timestamp": "2026-03-16T19:38:25.386815+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:25.685047336Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:25.386106Z"
+  },
+  {
+    "insertId": "69b85c270005dff8ea1f053d",
+    "jsonPayload": {
+      "logger": "app.websocket.steering_handler",
+      "message": "SteeringHandler: window opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=2, timeout=10s)",
+      "timestamp": "2026-03-16T19:38:15.385955+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:15.695914745Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:15.385016Z"
+  },
+  {
+    "insertId": "69b85c270005df52ad98dd65",
+    "jsonPayload": {
+      "logger": "app.websocket.story_ws",
+      "message": "_page_generation_loop: steering window opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=2, user_interrupt=False, timeout=10s)",
+      "timestamp": "2026-03-16T19:38:15.385689+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:15.695914745Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:15.384850Z"
+  },
+  {
+    "insertId": "69b85c2700043a16a0087761",
+    "jsonPayload": {
+      "audio_failed": false,
+      "duration_ms": 31170,
+      "event_type": "page_generation_complete",
+      "illustration_failed": true,
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation complete",
+      "page_number": 2,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:38:15.277897+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:15.361118909Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:15.277014Z"
+  },
+  {
+    "insertId": "69b85c2700039282f2fa38eb",
+    "jsonPayload": {
+      "logger": "app.websocket.page_orchestrator",
+      "message": "run_page_streamed: fallback image request failed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=2): 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'Resource has been exhausted (e.g. check quota).', 'status': 'RESOURCE_EXHAUSTED'}}",
+      "timestamp": "2026-03-16T19:38:15.235003+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:15.361118909Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "WARNING",
+    "timestamp": "2026-03-16T19:38:15.234114Z"
+  },
+  {
+    "insertId": "69b85c2700038e8aa560f003",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:generateContent \"HTTP/1.1 429 Too Many Requests\"",
+      "timestamp": "2026-03-16T19:38:15.233956+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:15.361118909Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:15.233098Z"
+  },
+  {
+    "insertId": "69b85c1c000eb55e20d19809",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:38:04.964691+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:05.038382709Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:04.963934Z"
+  },
+  {
+    "insertId": "69b85c1b0007097044217116",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:generateContent \"HTTP/1.1 429 Too Many Requests\"",
+      "timestamp": "2026-03-16T19:38:03.461954+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:38:03.706879491Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:38:03.461168Z"
+  },
+  {
+    "insertId": "69b85c10000ad8f193dc405c",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:37:52.711624+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:52.715353869Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:52.710897Z"
+  },
+  {
+    "insertId": "69b85c10000a305d78fde92f",
+    "jsonPayload": {
+      "logger": "app.websocket.page_orchestrator",
+      "message": "run_page_streamed: no image produced by model (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=2)",
+      "timestamp": "2026-03-16T19:37:52.668605+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:52.715353869Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "WARNING",
+    "timestamp": "2026-03-16T19:37:52.667741Z"
+  },
+  {
+    "insertId": "69b85c10000a30258f98886d",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:37:52.668351+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:52.715353869Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:52.667685Z"
+  },
+  {
+    "insertId": "69b85c08000dcff30f147d97",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:37:44.905396+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:45.055284689Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:44.905203Z"
+  },
+  {
+    "insertId": "69b85c080004ffe1cd778002",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:37:44.328016+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:44.390296204Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:44.327649Z"
+  },
+  {
+    "insertId": "69b85c080004fe44632d6f73",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:37:44.327438+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:44.390296204Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:44.327236Z"
+  },
+  {
+    "insertId": "69b85c080001a3db9e4a0341",
+    "jsonPayload": {
+      "event_type": "page_generation_started",
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation started",
+      "page_number": 2,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:37:44.107802+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:44.390296204Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:44.107483Z"
+  },
+  {
+    "insertId": "69b85c0800008e8139164205",
+    "jsonPayload": {
+      "logger": "app.websocket.steering_handler",
+      "message": "SteeringHandler: window closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=1, reason=timeout)",
+      "timestamp": "2026-03-16T19:37:44.036776+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:44.056898552Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:44.036481Z"
+  },
+  {
+    "insertId": "69b85bfe00008e4404d40207",
+    "jsonPayload": {
+      "logger": "app.websocket.steering_handler",
+      "message": "SteeringHandler: window opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=1, timeout=10s)",
+      "timestamp": "2026-03-16T19:37:34.036725+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:34.067644580Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:34.036420Z"
+  },
+  {
+    "insertId": "69b85bfe00008d7ae26969bb",
+    "jsonPayload": {
+      "logger": "app.websocket.story_ws",
+      "message": "_page_generation_loop: steering window opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, page=1, user_interrupt=False, timeout=10s)",
+      "timestamp": "2026-03-16T19:37:34.036394+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:34.067644580Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:34.036218Z"
+  },
+  {
+    "insertId": "69b85bfd000e5b1eaf940084",
+    "jsonPayload": {
+      "audio_failed": false,
+      "duration_ms": 18988,
+      "event_type": "page_generation_complete",
+      "illustration_failed": false,
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation complete",
+      "page_number": 1,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:37:33.941058+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:34.067644580Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:33.940830Z"
+  },
+  {
+    "insertId": "69b85bfd000da3620d827e68",
+    "jsonPayload": {
+      "logger": "app.services.character_bible_service",
+      "message": "CharacterBibleService: reference image set (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, uri=gs://whispertale-dev-story-assets/sessions/f0eeeea2-cd3b-4d76-8cae-848e0da7dddb/pages/1/illustration.png)",
+      "timestamp": "2026-03-16T19:37:33.894056+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:34.067644580Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:33.893794Z"
+  },
+  {
+    "insertId": "69b85bfd000c54f107708b9e",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session closed (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:37:33.808387+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:34.067644580Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:33.808177Z"
+  },
+  {
+    "insertId": "69b85bf700076c73ab444a3d",
+    "jsonPayload": {
+      "asset_type": "illustration",
+      "event_type": "page_asset_ready",
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page illustration generated (streamed)",
+      "page_number": 1,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:37:27.487706+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:27.736921952Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:27.486515Z"
+  },
+  {
+    "insertId": "69b85bf70006173664421636",
+    "jsonPayload": {
+      "logger": "app.services.media_persistence",
+      "message": "MediaPersistenceService: falling back to IAM signing (reason: AttributeError: you need a private key to sign credentials.the credentials you are currently using <class 'google.auth.compute_engine.credentials.Credentials'> just contains a token. see https://googleapis.dev/python/google-api-core/latest/auth.html#setting-up-a-service-account for more details.)",
+      "timestamp": "2026-03-16T19:37:27.400392+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:27.405262384Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:27.399158Z"
+  },
+  {
+    "insertId": "69b85beb000ae267d54f1965",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/global/publishers/google/models/gemini-2.5-flash-image:streamGenerateContent?alt=sse \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:37:15.714771+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:15.721692951Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:15.713319Z"
+  },
+  {
+    "insertId": "69b85beb00027e0569102731",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:37:15.164579+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:15.387376706Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:15.163333Z"
+  },
+  {
+    "insertId": "69b85beb00021a6540eeb954",
+    "jsonPayload": {
+      "logger": "app.config",
+      "message": "StoryStreamService: using Vertex AI endpoint (project=whispertale-dev, location=global)",
+      "timestamp": "2026-03-16T19:37:15.139161+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:15.387376706Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:15.137829Z"
+  },
+  {
+    "insertId": "69b85beb000219c1161de3af",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "Narrator session opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:37:15.138877+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:15.387376706Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:15.137665Z"
+  },
+  {
+    "insertId": "69b85bea000e86d3e12d4eb3",
+    "jsonPayload": {
+      "event_type": "page_generation_started",
+      "logger": "app.websocket.page_orchestrator",
+      "message": "page streamed generation started",
+      "page_number": 1,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:37:14.953157+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:15.053664904Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:14.952019Z"
+  },
+  {
+    "insertId": "69b85bea000d6427570fbee9",
+    "jsonPayload": {
+      "event_type": "session_status_changed",
+      "logger": "app.websocket.story_ws",
+      "message": "transcript_input: launching page generation loop",
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "status": "generating",
+      "timestamp": "2026-03-16T19:37:14.878676+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:15.053664904Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:14.877607Z"
+  },
+  {
+    "insertId": "69b85bea000b9ae1d649fbd0",
+    "jsonPayload": {
+      "logger": "app.services.character_bible_service",
+      "message": "CharacterBibleService: initialised (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb, protagonist=Betty and Joel)",
+      "timestamp": "2026-03-16T19:37:14.761557+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:15.053664904Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:14.760545Z"
+  },
+  {
+    "insertId": "69b85bea000a911dc8bee56f",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://us-central1-aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:37:14.693453+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:14.720446857Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:14.692509Z"
+  },
+  {
+    "insertId": "69b85bde00012f0a82afff18",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:37:02.078301+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:02.400667469Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:02.077578Z"
+  },
+  {
+    "insertId": "69b85bde0000ce41d40d0ebc",
+    "jsonPayload": {
+      "logger": "app.config",
+      "message": "CharacterBibleService: using Vertex AI endpoint (project=whispertale-dev, location=us-central1)",
+      "timestamp": "2026-03-16T19:37:02.053510+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:02.065519523Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:02.052801Z"
+  },
+  {
+    "insertId": "69b85bdd000ea58fd9a0420c",
+    "jsonPayload": {
+      "logger": "app.services.story_planner",
+      "message": "StoryPlannerService: arc created on attempt 1/3 (model=gemini-2.5-pro)",
+      "timestamp": "2026-03-16T19:37:01.960671+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:02.065519523Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:01.959887Z"
+  },
+  {
+    "insertId": "69b85bdd000e9f16cd7ed052",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://us-central1-aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/us-central1/publishers/google/models/gemini-2.5-pro:generateContent \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:37:01.958929+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:37:02.065519523Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:37:01.958230Z"
+  },
+  {
+    "insertId": "69b85bd20004f137e95af654",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:36:50.324645+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:50.411269400Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:50.323895Z"
+  },
+  {
+    "insertId": "69b85bd200048fc8fd5fb5bc",
+    "jsonPayload": {
+      "logger": "app.config",
+      "message": "StoryPlannerService: using Vertex AI endpoint (project=whispertale-dev, location=us-central1)",
+      "timestamp": "2026-03-16T19:36:50.299732+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:50.411269400Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:50.298952Z"
+  },
+  {
+    "insertId": "69b85bd20004077cea1ec7e5",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://us-central1-aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:36:50.264762+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:50.411269400Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:50.264060Z"
+  },
+  {
+    "insertId": "69b85bd000095500bc5dbb6e",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:36:48.612369+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:48.745050190Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:48.611584Z"
+  },
+  {
+    "insertId": "69b85bd00009543508347cfd",
+    "jsonPayload": {
+      "event_type": "safety_decision",
+      "logger": "app.services.safety_service",
+      "message": "SafetyService: content classified safe",
+      "safe": true,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:36:48.612091+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:48.745050190Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:48.611381Z"
+  },
+  {
+    "insertId": "69b85bd000094d6e168fdfb9",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://us-central1-aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:36:48.610292+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:48.745050190Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:48.609646Z"
+  },
+  {
+    "insertId": "69b85bcf0008badb67f2ac6d",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:36:47.573112+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:47.748931673Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:47.572123Z"
+  },
+  {
+    "insertId": "69b85bc8000431d49094a7eb",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://us-central1-aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:36:40.275483+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:40.422230447Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:40.274900Z"
+  },
+  {
+    "insertId": "69b85bc600017bbb8a795a64",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:36:38.098058+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:38.423099618Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:38.097211Z"
+  },
+  {
+    "insertId": "69b85bc600017aff37fa4840",
+    "jsonPayload": {
+      "event_type": "safety_decision",
+      "logger": "app.services.safety_service",
+      "message": "SafetyService: content classified safe",
+      "safe": true,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:36:38.097731+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:38.423099618Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:38.097023Z"
+  },
+  {
+    "insertId": "69b85bc6000172ea85122b95",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://us-central1-aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:36:38.095660+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:38.423099618Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:38.094954Z"
+  },
+  {
+    "insertId": "69b85bc2000ef8e386754fe9",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:36:34.982124+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:35.093941599Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:34.981219Z"
+  },
+  {
+    "insertId": "69b85bbb00073a308f9f13d3",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://us-central1-aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:36:27.474422+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:27.763826928Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:27.473648Z"
+  },
+  {
+    "insertId": "69b85bba0004e962762f4f1f",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:36:26.322628+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:26.431369481Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:26.321890Z"
+  },
+  {
+    "insertId": "69b85bba00048608b781e6ec",
+    "jsonPayload": {
+      "logger": "app.config",
+      "message": "SetupHandler: using Vertex AI endpoint (project=whispertale-dev, location=us-central1)",
+      "timestamp": "2026-03-16T19:36:26.297273+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:26.431369481Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:26.296456Z"
+  },
+  {
+    "insertId": "69b85bba0004859b23cfa623",
+    "jsonPayload": {
+      "event_type": "safety_decision",
+      "logger": "app.services.safety_service",
+      "message": "SafetyService: content classified safe",
+      "safe": true,
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:36:26.297071+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:26.431369481Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:26.296347Z"
+  },
+  {
+    "insertId": "69b85bba00047d86d6685a05",
+    "jsonPayload": {
+      "logger": "httpx",
+      "message": "HTTP Request: POST https://us-central1-aiplatform.googleapis.com/v1beta1/projects/whispertale-dev/locations/us-central1/publishers/google/models/gemini-2.5-flash:generateContent \"HTTP/1.1 200 OK\"",
+      "timestamp": "2026-03-16T19:36:26.294945+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:26.431369481Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:26.294278Z"
+  },
+  {
+    "insertId": "69b85bb90000a004f578463e",
+    "jsonPayload": {
+      "logger": "google_genai.models",
+      "message": "AFC is enabled with max remote calls: 10.",
+      "timestamp": "2026-03-16T19:36:25.041917+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:25.102436185Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:25.040964Z"
+  },
+  {
+    "insertId": "69b85bb90000322371c344a0",
+    "jsonPayload": {
+      "logger": "app.config",
+      "message": "SafetyService: using Vertex AI endpoint (project=whispertale-dev, location=us-central1)",
+      "timestamp": "2026-03-16T19:36:25.013718+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:25.102436185Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:25.012835Z"
+  },
+  {
+    "insertId": "69b85bb300078ca78df5a25c",
+    "jsonPayload": {
+      "command": "session_start",
+      "event_type": "voice_command_applied",
+      "logger": "app.websocket.story_ws",
+      "message": "voice command received and applied: session_start",
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "timestamp": "2026-03-16T19:36:19.495547+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:19.772261939Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:19.494759Z"
+  },
+  {
+    "insertId": "69b85bb300078c6c0e800321",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "VoiceSessionService.start called for already-open session f0eeeea2-cd3b-4d76-8cae-848e0da7dddb; ignoring.",
+      "timestamp": "2026-03-16T19:36:19.495348+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:19.772261939Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "WARNING",
+    "timestamp": "2026-03-16T19:36:19.494700Z"
+  },
+  {
+    "insertId": "69b85bb3000729668c4ce744",
+    "jsonPayload": {
+      "event_type": "ws_connect",
+      "logger": "app.websocket.story_ws",
+      "message": "WebSocket connected",
+      "session_id": "f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "session_status": "setup",
+      "timestamp": "2026-03-16T19:36:19.470037+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:19.772261939Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:19.469350Z"
+  },
+  {
+    "insertId": "69b85bb300064c5f24c3a500",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:36:19.440133374Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     connection open",
+    "timestamp": "2026-03-16T19:36:19.412767Z"
+  },
+  {
+    "insertId": "69b85bb300063daa050cc9a1",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:36:19.440133374Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     ('169.254.169.126', 13734) - \"WebSocket /ws/story/f0eeeea2-cd3b-4d76-8cae-848e0da7dddb?token=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb\" [accepted]",
+    "timestamp": "2026-03-16T19:36:19.409002Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "301.004051s",
+      "protocol": "HTTP/1.1",
+      "remoteIp": "2600:8800:290:6300:5ccc:a42b:162b:f815",
+      "requestMethod": "GET",
+      "requestSize": "237663",
+      "requestUrl": "https://voice-story-backend-813185030273.us-central1.run.app/ws/story/f0eeeea2-cd3b-4d76-8cae-848e0da7dddb?token=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb",
+      "responseSize": "6947515",
+      "serverIp": "2600:1900:4242:200::",
+      "status": 101,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+    },
+    "insertId": "69b85ce000062b7f17ad9b36",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-03-16T19:41:20.409735154Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "spanId": "2eb6595a02866962",
+    "timestamp": "2026-03-16T19:36:19.392817Z",
+    "trace": "projects/whispertale-dev/traces/c95544879773532163b364fc1994b79e"
+  },
+  {
+    "insertId": "69b85bb300027cf00c76a90a",
+    "jsonPayload": {
+      "logger": "app.services.adk_voice_service",
+      "message": "VoiceSession opened (session=f0eeeea2-cd3b-4d76-8cae-848e0da7dddb)",
+      "timestamp": "2026-03-16T19:36:19.163692+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:19.439706939Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:19.163056Z"
+  },
+  {
+    "insertId": "69b85bb20009c63aaf122fb1",
+    "jsonPayload": {
+      "logger": "app.config",
+      "message": "VoiceSessionService: using Vertex AI endpoint (project=whispertale-dev, location=global)",
+      "timestamp": "2026-03-16T19:36:18.641434+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:18.772527758Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:18.640570Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.590661068s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://voice-story-ui--whispertale-dev.us-east4.hosted.app/",
+      "remoteIp": "2600:8800:290:6300:5ccc:a42b:162b:f815",
+      "requestMethod": "POST",
+      "requestSize": "876",
+      "requestUrl": "https://voice-story-backend-813185030273.us-central1.run.app/sessions/f0eeeea2-cd3b-4d76-8cae-848e0da7dddb/voice-session",
+      "responseSize": "351",
+      "serverIp": "2600:1900:4242:200::",
+      "status": 200,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+    },
+    "insertId": "69b85bb30002870650d95b19",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-03-16T19:36:19.404258096Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "5b88a609adbab018",
+    "timestamp": "2026-03-16T19:36:18.572612Z",
+    "trace": "projects/whispertale-dev/traces/c99ee245aebf0077dc01a28a20a31d01"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.086145996s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://voice-story-ui--whispertale-dev.us-east4.hosted.app/",
+      "remoteIp": "2600:8800:290:6300:5ccc:a42b:162b:f815",
+      "requestMethod": "POST",
+      "requestSize": "823",
+      "requestUrl": "https://voice-story-backend-813185030273.us-central1.run.app/sessions",
+      "responseSize": "402",
+      "serverIp": "2600:1900:4242:200::",
+      "status": 201,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+    },
+    "insertId": "69b85bb200078dd3e7280c90",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-03-16T19:36:18.738517141Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "2c1ef0b2a1a0b419",
+    "timestamp": "2026-03-16T19:36:18.406960Z",
+    "trace": "projects/whispertale-dev/traces/d4f0e9aa0aadd456dc01a28a20a3197a",
+    "traceSampled": true
+  },
+  {
+    "insertId": "69b85baa0001b52962bd7935",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fvarlog%2Fsystem",
+    "receiveTimestamp": "2026-03-16T19:36:10.117900531Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "textPayload": "Default STARTUP TCP probe succeeded after 1 attempt for container \"voice-story-backend-1\" on port 8080.",
+    "timestamp": "2026-03-16T19:36:10.111913Z"
+  },
+  {
+    "insertId": "69b85baa0001b399efc9d39b",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:36:10.452408294Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)",
+    "timestamp": "2026-03-16T19:36:10.111513Z"
+  },
+  {
+    "insertId": "69b85baa0001aa05e4235a6c",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:36:10.452408294Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     Application startup complete.",
+    "timestamp": "2026-03-16T19:36:10.109061Z"
+  },
+  {
+    "insertId": "69b85baa0001a9824275c174",
+    "jsonPayload": {
+      "event_type": "startup",
+      "logger": "app.main",
+      "message": "Voice Story Agent started. Docs: http://localhost:8000/docs  |  Health: http://localhost:8000/health",
+      "timestamp": "2026-03-16T19:36:10.109483+00:00"
+    },
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-03-16T19:36:10.116359429Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "timestamp": "2026-03-16T19:36:10.108930Z"
+  },
+  {
+    "insertId": "69b85baa0001a634e1eacf0e",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:36:10.115480601Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     Waiting for application startup.",
+    "timestamp": "2026-03-16T19:36:10.108084Z"
+  },
+  {
+    "insertId": "69b85baa0001a6176bafaeee",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-03-16T19:36:10.115480601Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "INFO:     Started server process [2]",
+    "timestamp": "2026-03-16T19:36:10.108055Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.113365899s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://voice-story-ui--whispertale-dev.us-east4.hosted.app/",
+      "remoteIp": "2600:8800:290:6300:5ccc:a42b:162b:f815",
+      "requestMethod": "POST",
+      "requestSize": "825",
+      "requestUrl": "https://voice-story-backend-813185030273.us-central1.run.app/sessions",
+      "responseSize": "402",
+      "serverIp": "2600:1900:4242:200::",
+      "status": 201,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+    },
+    "insertId": "69b85baa00063402fcacf9a5",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-03-16T19:36:10.414012199Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "cfd9f06b64cffbb7",
+    "timestamp": "2026-03-16T19:36:05.290182Z",
+    "trace": "projects/whispertale-dev/traces/7623184c170f87c96ed94f874784b4f8"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.113844178s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://voice-story-ui--whispertale-dev.us-east4.hosted.app/",
+      "remoteIp": "2600:8800:290:6300:5ccc:a42b:162b:f815",
+      "requestMethod": "POST",
+      "requestSize": "824",
+      "requestUrl": "https://voice-story-backend-813185030273.us-central1.run.app/sessions",
+      "responseSize": "402",
+      "serverIp": "2600:1900:4242:200::",
+      "status": 201,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+    },
+    "insertId": "69b85baa000635ce692e5bd8",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-03-16T19:36:10.745842447Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "791ccb36b1223ced",
+    "timestamp": "2026-03-16T19:36:01.138151Z",
+    "trace": "projects/whispertale-dev/traces/21aff56d28fdd6ed7a1bde7555778759"
+  },
+  {
+    "insertId": "69b85b9e000f3826cbd4f0b0",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18",
+      "scaling_reason": "AUTOSCALING"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Fvarlog%2Fsystem",
+    "receiveTimestamp": "2026-03-16T19:35:59.002916609Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "textPayload": "Starting new instance. Reason: AUTOSCALING - Instance started due to configured scaling factors (e.g. CPU utilization, request throughput, etc.) or no existing capacity for current traffic.",
+    "timestamp": "2026-03-16T19:35:58.997414Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "11.321506554s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://voice-story-ui--whispertale-dev.us-east4.hosted.app/",
+      "remoteIp": "2600:8800:290:6300:5ccc:a42b:162b:f815",
+      "requestMethod": "POST",
+      "requestSize": "825",
+      "requestUrl": "https://voice-story-backend-813185030273.us-central1.run.app/sessions",
+      "responseSize": "402",
+      "serverIp": "2600:1900:4242:200::",
+      "status": 201,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+    },
+    "insertId": "69b85baa000642b4f7a6e574",
+    "labels": {
+      "instanceId": "00da6cd2c44cd4645ba0cd4beb26f6be774c55606c834742e4ded29ddd87559731a3d9a0ccde849fc59b3d8a2ad2ee39628611c5a5354e437a2a02a5081f631ef614d6e3c227970850dae2ff2f0d18"
+    },
+    "logName": "projects/whispertale-dev/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-03-16T19:36:10.745842447Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "voice-story-backend",
+        "location": "us-central1",
+        "project_id": "whispertale-dev",
+        "revision_name": "voice-story-backend-00043-vbd",
+        "service_name": "voice-story-backend"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "4c8fa2f8368c0445",
+    "timestamp": "2026-03-16T19:35:58.979389Z",
+    "trace": "projects/whispertale-dev/traces/e9e82471c81b3ac07a1bde7555778edd",
+    "traceSampled": true
+  }
+]

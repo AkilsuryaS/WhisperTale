@@ -603,6 +603,47 @@ async def run_page_streamed(
         await session_store.save_page(session_id, page)
         await emit("page_text_ready", page=page_number, text=full_text)
 
+    # -- Fallback image request when streaming call produced text but no image --
+    if not image_succeeded and full_text:
+        try:
+            fallback = await story_stream_svc.generate_image_only(
+                beat=beat,
+                page_history=page_history,
+                bible=bible,
+                page_text=full_text,
+            )
+            if fallback is not None:
+                gcs_uri = await media_svc.store_illustration(
+                    session_id, page_number, fallback.data
+                )
+                signed_url = await media_svc.get_signed_url(gcs_uri)
+                image_gcs_uri = gcs_uri
+                image_succeeded = True
+                illustration_failed = False
+                await emit(
+                    "page_image_ready",
+                    page=page_number,
+                    image_url=signed_url,
+                    gcs_uri=gcs_uri,
+                )
+                logger.info(
+                    "page illustration generated via fallback",
+                    extra={
+                        "event_type": "page_asset_ready",
+                        "session_id": session_id,
+                        "page_number": page_number,
+                        "asset_type": "illustration",
+                    },
+                )
+        except Exception as exc:
+            logger.warning(
+                "run_page_streamed: fallback image request failed "
+                "(session=%s, page=%d): %s",
+                session_id,
+                page_number,
+                exc,
+            )
+
     # -- Reference image on page 1 --
     if page_number == 1 and image_succeeded and image_gcs_uri:
         try:

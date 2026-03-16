@@ -131,6 +131,7 @@ const WS_BASE =
 /** T-045: 1 s base → 1 s, 2 s, 4 s, 8 s, 16 s (5 attempts). */
 const RECONNECT_BASE_MS = 1000;
 const MAX_RETRIES = 5;
+const LIVE_AUDIO_SAMPLE_RATE = 24000;
 
 interface SpeechRecognitionResultLike {
   readonly isFinal: boolean;
@@ -203,6 +204,8 @@ export function useVoiceSession(
   // Live agent (binary WebSocket frames).  Created lazily on first startSession()
   // call (requires a user gesture) and closed on stopSession().
   const audioContextRef = useRef<AudioContext | null>(null);
+  // Absolute AudioContext time where the next PCM chunk should start.
+  const audioPlaybackCursorRef = useRef(0);
 
   // Track whether the first `connected` event has fired so subsequent ones
   // are identified as reconnects.
@@ -441,7 +444,15 @@ export function useVoiceSession(
     // Create an AudioContext for playing back 24 kHz PCM from the Gemini Live
     // agent (must happen after a user gesture, which the tap already was).
     if (!audioContextRef.current && typeof AudioContext !== "undefined") {
-      audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+      audioContextRef.current = new AudioContext({ sampleRate: LIVE_AUDIO_SAMPLE_RATE });
+      audioPlaybackCursorRef.current = 0;
+    }
+    if (audioContextRef.current?.state === "suspended") {
+      try {
+        await audioContextRef.current.resume();
+      } catch {
+        // Best-effort; we'll try to resume again on first chunk.
+      }
     }
 
     const wsOpts = {
@@ -453,21 +464,35 @@ export function useVoiceSession(
       onAudioChunk: (pcm: ArrayBuffer) => {
         const ctx = audioContextRef.current;
         if (!ctx) return;
+        const playChunk = () => {
+          // Gemini Live emits 16-bit signed little-endian PCM at 24 kHz mono.
+          const int16 = new Int16Array(pcm);
+          if (int16.length === 0) return;
+          const float32 = new Float32Array(int16.length);
+          for (let i = 0; i < int16.length; i++) {
+            float32[i] = int16[i] / 0x8000;
+          }
+          const buffer = ctx.createBuffer(1, float32.length, LIVE_AUDIO_SAMPLE_RATE);
+          buffer.copyToChannel(float32, 0);
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          const startAt = Math.max(
+            ctx.currentTime + 0.02,
+            audioPlaybackCursorRef.current
+          );
+          source.start(startAt);
+          audioPlaybackCursorRef.current = startAt + buffer.duration;
+        };
+
         if (ctx.state === "suspended") {
-          void ctx.resume();
+          void ctx.resume().then(playChunk).catch(() => {});
+          return;
         }
-        // Gemini Live emits 16-bit signed little-endian PCM at 24 kHz mono.
-        const int16 = new Int16Array(pcm);
-        const float32 = new Float32Array(int16.length);
-        for (let i = 0; i < int16.length; i++) {
-          float32[i] = int16[i] / 0x8000;
-        }
-        const buffer = ctx.createBuffer(1, float32.length, 24000);
-        buffer.copyToChannel(float32, 0);
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        source.connect(ctx.destination);
-        source.start();
+
+        if (ctx.state === "closed") return;
+
+        playChunk();
       },
       onMaxRetriesExhausted: () => {
         setError({
@@ -563,6 +588,7 @@ export function useVoiceSession(
     setIsReady(false);
     setWsClientState(null);
     setLiveTranscript("");
+    audioPlaybackCursorRef.current = 0;
     // Close the playback AudioContext
     if (audioContextRef.current) {
       audioContextRef.current.close().catch(() => {});
