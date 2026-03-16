@@ -22,6 +22,12 @@ Key highlights:
 
 ---
 
+## Architecture Diagram
+
+![WhisperTale System Architecture](voice-story-agent/architecture-diagram.png)
+
+---
+
 ## How It Works
 
 ```mermaid
