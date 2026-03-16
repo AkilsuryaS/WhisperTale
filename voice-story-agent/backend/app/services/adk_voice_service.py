@@ -10,8 +10,17 @@ Public interface (T-014):
     async def stream_turns(session_id: str) -> AsyncIterator[VoiceTurn]
     async def speak(session_id: str, text: str) -> None
 
+Narration interface (Live API narrator):
+    async def start_narration(session_id: str) -> None
+    async def send_narration_text(session_id: str, text: str) -> None
+    async def end_narration_turn(session_id: str) -> None
+    async def stream_narration_audio(session_id: str) -> AsyncIterator[bytes]
+    async def end_narration(session_id: str) -> None
+
 Design:
 - Active sessions are held in an in-memory dict keyed by session_id.
+  Narrator sessions use the key "{session_id}::narrator" to avoid collisions
+  with the conversational setup session.
 - Each entry stores (AsyncSession, AsyncExitStack) so the async context
   manager from AsyncLive.connect() stays open across multiple calls.
 - The genai.Client is injectable via the constructor for testability.
@@ -46,6 +55,15 @@ logger = logging.getLogger(__name__)
 
 _PCM_MIME_TYPE = "audio/pcm;rate=16000"
 _SPEAK_TIMEOUT_SECONDS = 10.0
+_NARRATION_TIMEOUT_SECONDS = 30.0
+
+_NARRATOR_SYSTEM_PROMPT = (
+    "You are a warm, expressive children's storyteller narrating a bedtime "
+    "story for a child aged 4–10. Read the text you are given aloud with "
+    "natural emotional variation: wonder, excitement, gentle suspense. "
+    "Use short sentences and pauses for dramatic effect. Do not add any "
+    "commentary or stage directions — only narrate the story text provided."
+)
 
 
 @dataclass
@@ -356,3 +374,183 @@ class VoiceSessionService:
                 f"speak receive loop failed for session '{session_id}': {exc}",
                 cause=exc,
             ) from exc
+
+    # ------------------------------------------------------------------
+    # Narration methods (dedicated Live API narrator session)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _narrator_key(session_id: str) -> str:
+        return f"{session_id}::narrator"
+
+    async def start_narration(self, session_id: str) -> None:
+        """
+        Open a dedicated Gemini Live session for story narration.
+
+        The narrator session is keyed separately from the conversational
+        setup session so both can coexist.  If a narrator session is already
+        open for this *session_id* the call is a no-op.
+        """
+        key = self._narrator_key(session_id)
+        if key in self._sessions:
+            logger.debug(
+                "start_narration: narrator session already open (session=%s)",
+                session_id,
+            )
+            return
+
+        client = self._get_client()
+        config = self._live_connect_config(_NARRATOR_SYSTEM_PROMPT)
+        stack = contextlib.AsyncExitStack()
+
+        try:
+            session: AsyncSession = await stack.enter_async_context(
+                client.aio.live.connect(
+                    model=settings.GEMINI_LIVE_MODEL,
+                    config=config,
+                )
+            )
+        except Exception as exc:
+            await stack.aclose()
+            raise VoiceSessionError(
+                f"Failed to open narrator session for '{session_id}': {exc}",
+                cause=exc,
+            ) from exc
+
+        self._sessions[key] = (session, stack)
+        logger.info("Narrator session opened (session=%s)", session_id)
+
+    async def send_narration_text(self, session_id: str, text: str) -> None:
+        """
+        Send a text chunk to the narrator for audio synthesis.
+
+        Each call sends the text with ``turn_complete=False`` so the model
+        accumulates text across multiple calls.  Call ``end_narration_turn``
+        after the last chunk to signal completion.
+        """
+        key = self._narrator_key(session_id)
+        if key not in self._sessions:
+            raise VoiceSessionNotFoundError(key)
+
+        session, _ = self._sessions[key]
+        try:
+            await session.send_client_content(
+                turns=[
+                    genai_types.Content(
+                        parts=[genai_types.Part(text=text)],
+                        role="user",
+                    )
+                ],
+                turn_complete=False,
+            )
+        except Exception as exc:
+            raise VoiceSessionError(
+                f"send_narration_text failed for session '{session_id}': {exc}",
+                cause=exc,
+            ) from exc
+
+    async def end_narration_turn(self, session_id: str) -> None:
+        """
+        Signal to the narrator that all text for this page has been sent.
+
+        This sends ``turn_complete=True`` so the model finalises its audio
+        response.
+        """
+        key = self._narrator_key(session_id)
+        if key not in self._sessions:
+            raise VoiceSessionNotFoundError(key)
+
+        session, _ = self._sessions[key]
+        try:
+            await session.send_client_content(
+                turns=[
+                    genai_types.Content(
+                        parts=[genai_types.Part(text="")],
+                        role="user",
+                    )
+                ],
+                turn_complete=True,
+            )
+        except Exception as exc:
+            raise VoiceSessionError(
+                f"end_narration_turn failed for session '{session_id}': {exc}",
+                cause=exc,
+            ) from exc
+
+    async def stream_narration_audio(
+        self, session_id: str
+    ) -> AsyncIterator[bytes]:
+        """
+        Yield PCM audio frames from the narrator until ``turn_complete``.
+
+        This async generator blocks on ``session.receive()`` and yields
+        raw audio bytes as the narrator produces them.  It terminates when
+        the server signals ``turn_complete=True``.
+
+        A timeout of ``_NARRATION_TIMEOUT_SECONDS`` is applied to each
+        individual receive; if no data arrives within that window the
+        generator stops gracefully.
+        """
+        key = self._narrator_key(session_id)
+        if key not in self._sessions:
+            raise VoiceSessionNotFoundError(key)
+
+        session, _ = self._sessions[key]
+
+        try:
+            async for response in session.receive():
+                server_content = getattr(response, "server_content", None)
+                if server_content is None:
+                    continue
+
+                model_turn = getattr(server_content, "model_turn", None)
+                if model_turn is not None:
+                    for part in getattr(model_turn, "parts", []):
+                        inline = getattr(part, "inline_data", None)
+                        if inline is not None:
+                            data = getattr(inline, "data", b"") or b""
+                            if data:
+                                yield data
+
+                if getattr(server_content, "turn_complete", False):
+                    return
+        except (VoiceSessionNotFoundError, VoiceSessionError):
+            raise
+        except Exception as exc:
+            raise VoiceSessionError(
+                f"stream_narration_audio failed for session '{session_id}': {exc}",
+                cause=exc,
+            ) from exc
+
+    async def end_narration(self, session_id: str) -> None:
+        """
+        Close the narrator Live session.
+
+        No-op if the narrator session is already closed or was never opened.
+        """
+        key = self._narrator_key(session_id)
+        if key not in self._sessions:
+            logger.debug(
+                "end_narration: no narrator session for %s; no-op.",
+                session_id,
+            )
+            return
+
+        session, stack = self._sessions.pop(key)
+        try:
+            await session.close()
+        except Exception as exc:
+            logger.warning(
+                "Error closing narrator AsyncSession for %s: %s",
+                session_id,
+                exc,
+            )
+        try:
+            await stack.aclose()
+        except Exception as exc:
+            logger.warning(
+                "Error closing narrator AsyncExitStack for %s: %s",
+                session_id,
+                exc,
+            )
+        logger.info("Narrator session closed (session=%s)", session_id)

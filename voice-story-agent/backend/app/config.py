@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     # ── Gemini Models ─────────────────────────────────────────────────────
     GEMINI_PRO_MODEL: str = "gemini-2.5-pro"
     GEMINI_FLASH_MODEL: str = "gemini-2.5-flash"
+    GEMINI_FLASH_IMAGE_MODEL: str = "gemini-2.5-flash-preview-image-generation"
 
     # ── Imagen ────────────────────────────────────────────────────────────
     IMAGEN_MODEL: str = "imagen-4.0-fast-generate-001"

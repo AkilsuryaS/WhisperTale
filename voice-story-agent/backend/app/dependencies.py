@@ -23,6 +23,7 @@ from app.services.image_generation import ImageGenerationService
 from app.services.media_persistence import MediaPersistenceService
 from app.services.safety_service import SafetyService
 from app.services.story_planner import StoryPlannerService
+from app.services.story_stream_service import StoryStreamService
 from app.services.tts_service import TTSService
 from app.websocket.setup_handler import SetupHandler
 
@@ -35,6 +36,7 @@ _story_planner_singleton: StoryPlannerService | None = None
 _character_bible_svc_singleton: CharacterBibleService | None = None
 _image_svc_singleton: ImageGenerationService | None = None
 _tts_svc_singleton: TTSService | None = None
+_story_stream_svc_singleton: StoryStreamService | None = None
 _media_svc_singleton: MediaPersistenceService | None = None
 
 
@@ -97,6 +99,14 @@ def get_tts_svc() -> TTSService:
     if _tts_svc_singleton is None:
         _tts_svc_singleton = TTSService()
     return _tts_svc_singleton
+
+
+def get_story_stream_svc() -> StoryStreamService:
+    """Return the process-wide StoryStreamService singleton."""
+    global _story_stream_svc_singleton
+    if _story_stream_svc_singleton is None:
+        _story_stream_svc_singleton = StoryStreamService()
+    return _story_stream_svc_singleton
 
 
 def get_media_svc() -> MediaPersistenceService:

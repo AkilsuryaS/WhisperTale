@@ -1,35 +1,16 @@
 """
 PageOrchestrator — drives the generation of a single story page.
 
-Public interface (T-025):
-    async def run_page(
-        session_id: str,
-        page_number: int,
-        beat: str,
-        page_history: list[str],
-        emit: Callable,                   # async (event_type, **fields) → None
-        story_planner: StoryPlannerService,
-        character_bible_svc: CharacterBibleService,
-        image_svc: ImageGenerationService,
-        tts_svc: TTSService,
-        media_svc: MediaPersistenceService,
-        session_store: SessionStore,
-    ) -> None
+Legacy interface (used by EditHandlerService):
+    async def run_page(...)   # Sequential: StoryPlanner → Imagen → Cloud TTS
 
-Sequence
---------
-1.  Emit ``page_generating``; persist Page(status="pending") to SessionStore.
-2.  Call ``story_planner.expand_page`` → (text, narration_script).
-    Emit ``page_text_ready``; update Page.status = text_ready.
-3.  Retrieve CharacterBible; call ``character_bible_svc.build_image_prompt``.
-4.  Launch image and TTS generation in parallel via ``asyncio.gather``:
-    - Image: generate → store → signed URL → emit ``page_image_ready``
-             OR emit ``page_asset_failed(asset_type="illustration")`` on error.
-    - TTS:   synthesise → store → signed URL → emit ``page_audio_ready``
-             OR emit ``page_asset_failed(asset_type="narration")`` on error.
-5.  If page 1 and image succeeded: call ``character_bible_svc.set_reference_image``.
-6.  Persist final Page (with status + failure flags) via SessionStore.
-7.  Emit ``page_complete`` — ALWAYS fires, even when both assets fail.
+Streaming interface (main page loop):
+    async def run_page_streamed(...)   # Dual-Gemini: Flash TEXT+IMAGE + Live API narrator
+
+``run_page_streamed`` replaces ``run_page`` in the main 5-page generation loop.
+It uses a single Gemini 2.5 Flash call with ``response_modalities=["TEXT","IMAGE"]``
+for interleaved text + image, and pipes text chunks into a Gemini Live API
+narrator session for real-time PCM audio narration.
 
 Asset failures MUST NOT propagate; they are caught, logged, and reflected via
 ``page_asset_failed`` events and ``illustration_failed`` / ``audio_failed`` flags.
@@ -44,12 +25,20 @@ import time
 from datetime import datetime, timezone
 from typing import Callable
 
+from fastapi import WebSocket
+
 from app.models.page import Page, PageStatus
+from app.services.adk_voice_service import VoiceSessionService
 from app.services.character_bible_service import CharacterBibleService
 from app.services.image_generation import ImageGenerationService
 from app.services.media_persistence import MediaPersistenceService
 from app.services.session_store import SessionStore
 from app.services.story_planner import StoryPlannerService
+from app.services.story_stream_service import (
+    StoryStreamService,
+    TextChunk,
+    ImageChunk,
+)
 from app.services.tts_service import TTSService, default_voice_config
 
 logger = logging.getLogger(__name__)
@@ -369,6 +358,282 @@ async def run_page(
     _page_elapsed_ms = round((time.perf_counter() - _page_start_time) * 1000)
     logger.info(
         "page generation complete",
+        extra={
+            "event_type": "page_generation_complete",
+            "session_id": session_id,
+            "page_number": page_number,
+            "illustration_failed": illustration_failed,
+            "audio_failed": audio_failed,
+            "duration_ms": _page_elapsed_ms,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Streaming entry point (dual-Gemini architecture)
+# ---------------------------------------------------------------------------
+
+
+async def run_page_streamed(
+    session_id: str,
+    page_number: int,
+    beat: str,
+    page_history: list[str],
+    emit: Callable,
+    ws: WebSocket,
+    story_stream_svc: StoryStreamService,
+    voice_svc: VoiceSessionService | None,
+    character_bible_svc: CharacterBibleService,
+    media_svc: MediaPersistenceService,
+    session_store: SessionStore,
+) -> None:
+    """
+    Orchestrate page generation using the dual-Gemini streaming architecture.
+
+    1. Gemini 2.5 Flash with ``response_modalities=["TEXT","IMAGE"]`` streams
+       interleaved text chunks and an illustration.
+    2. Text chunks are piped into a Gemini Live API narrator session which
+       produces PCM audio frames streamed as binary WebSocket payloads.
+
+    Both streams run concurrently via asyncio.  Asset failures are caught
+    internally.  ``page_complete`` is always the final event emitted.
+    """
+    illustration_failed = False
+    audio_failed = False
+    image_succeeded = False
+    image_gcs_uri: str | None = None
+
+    page = Page(page_number=page_number, beat=beat, status=PageStatus.pending)
+    await emit("page_generating", page=page_number, beat=beat)
+    await session_store.save_page(session_id, page)
+    logger.info(
+        "page streamed generation started",
+        extra={
+            "event_type": "page_generation_started",
+            "session_id": session_id,
+            "page_number": page_number,
+        },
+    )
+    _page_start_time = time.perf_counter()
+
+    bible = await session_store.get_character_bible(session_id)
+
+    # -- Start narrator Live session --
+    narrator_available = False
+    if voice_svc is not None:
+        try:
+            await voice_svc.start_narration(session_id)
+            narrator_available = True
+        except Exception as exc:
+            logger.warning(
+                "run_page_streamed: failed to start narrator (session=%s): %s",
+                session_id,
+                exc,
+            )
+            audio_failed = True
+
+    # -- Shared state between concurrent tasks --
+    full_text_parts: list[str] = []
+
+    async def _visual_consumer() -> None:
+        """Consume the visual stream: emit text chunks, pipe to narrator, handle images."""
+        nonlocal illustration_failed, image_succeeded, image_gcs_uri
+
+        try:
+            async for chunk in story_stream_svc.generate_page_stream(
+                beat, page_history, bible
+            ):
+                if isinstance(chunk, TextChunk):
+                    full_text_parts.append(chunk.text)
+                    try:
+                        await emit(
+                            "page_text_chunk",
+                            page=page_number,
+                            delta=chunk.text,
+                        )
+                    except Exception:
+                        pass
+                    if narrator_available and voice_svc is not None:
+                        try:
+                            await voice_svc.send_narration_text(
+                                session_id, chunk.text
+                            )
+                        except Exception as narr_exc:
+                            logger.warning(
+                                "run_page_streamed: send_narration_text failed "
+                                "(session=%s, page=%d): %s",
+                                session_id,
+                                page_number,
+                                narr_exc,
+                            )
+
+                elif isinstance(chunk, ImageChunk):
+                    try:
+                        gcs_uri = await media_svc.store_illustration(
+                            session_id, page_number, chunk.data
+                        )
+                        signed_url = await media_svc.get_signed_url(gcs_uri)
+                        image_gcs_uri = gcs_uri
+                        image_succeeded = True
+                        await emit(
+                            "page_image_ready",
+                            page=page_number,
+                            image_url=signed_url,
+                            gcs_uri=gcs_uri,
+                        )
+                        logger.info(
+                            "page illustration generated (streamed)",
+                            extra={
+                                "event_type": "page_asset_ready",
+                                "session_id": session_id,
+                                "page_number": page_number,
+                                "asset_type": "illustration",
+                            },
+                        )
+                    except Exception as img_exc:
+                        illustration_failed = True
+                        logger.warning(
+                            "run_page_streamed: illustration storage failed "
+                            "(session=%s, page=%d): %s",
+                            session_id,
+                            page_number,
+                            img_exc,
+                        )
+                        await emit(
+                            "page_asset_failed",
+                            page=page_number,
+                            asset_type="illustration",
+                            error=str(img_exc),
+                        )
+        except Exception as exc:
+            logger.error(
+                "run_page_streamed: visual stream failed "
+                "(session=%s, page=%d): %s",
+                session_id,
+                page_number,
+                exc,
+            )
+            illustration_failed = True
+        finally:
+            if narrator_available and voice_svc is not None:
+                try:
+                    await voice_svc.end_narration_turn(session_id)
+                except Exception:
+                    pass
+
+    async def _audio_forwarder() -> None:
+        """Forward PCM audio frames from the narrator to the WebSocket."""
+        nonlocal audio_failed
+
+        if not narrator_available or voice_svc is None:
+            return
+
+        try:
+            async for pcm_frame in voice_svc.stream_narration_audio(
+                session_id
+            ):
+                try:
+                    await ws.send_bytes(pcm_frame)
+                except Exception:
+                    break
+        except Exception as exc:
+            audio_failed = True
+            logger.warning(
+                "run_page_streamed: narrator audio failed "
+                "(session=%s, page=%d): %s",
+                session_id,
+                page_number,
+                exc,
+            )
+            await emit(
+                "page_asset_failed",
+                page=page_number,
+                asset_type="narration",
+                error=str(exc),
+            )
+
+    # -- Run both streams concurrently --
+    results = await asyncio.gather(
+        _visual_consumer(),
+        _audio_forwarder(),
+        return_exceptions=True,
+    )
+
+    for i, result in enumerate(results):
+        if isinstance(result, Exception):
+            task_name = "visual_consumer" if i == 0 else "audio_forwarder"
+            logger.error(
+                "run_page_streamed: %s raised (session=%s, page=%d): %s",
+                task_name,
+                session_id,
+                page_number,
+                result,
+            )
+            if i == 0:
+                illustration_failed = True
+            else:
+                audio_failed = True
+
+    # -- Close narrator session --
+    if voice_svc is not None:
+        await voice_svc.end_narration(session_id)
+
+    # -- If no image was produced by the model, flag it --
+    if not image_succeeded and not illustration_failed:
+        illustration_failed = True
+        logger.warning(
+            "run_page_streamed: no image produced by model "
+            "(session=%s, page=%d)",
+            session_id,
+            page_number,
+        )
+        await emit(
+            "page_asset_failed",
+            page=page_number,
+            asset_type="illustration",
+            error="Model did not produce an illustration",
+        )
+
+    # -- Emit page_text_ready with full accumulated text --
+    full_text = "".join(full_text_parts)
+    if full_text:
+        page.text = full_text
+        page.narration_script = full_text
+        page.status = PageStatus.text_ready
+        await session_store.save_page(session_id, page)
+        await emit("page_text_ready", page=page_number, text=full_text)
+
+    # -- Reference image on page 1 --
+    if page_number == 1 and image_succeeded and image_gcs_uri:
+        try:
+            await character_bible_svc.set_reference_image(
+                session_id, image_gcs_uri
+            )
+        except Exception as exc:
+            logger.warning(
+                "run_page_streamed: set_reference_image failed "
+                "(session=%s): %s",
+                session_id,
+                exc,
+            )
+
+    # -- Persist final Page --
+    page.illustration_failed = illustration_failed
+    page.audio_failed = audio_failed
+    page.status = PageStatus.complete
+    page.generated_at = datetime.now(timezone.utc)
+    await session_store.save_page(session_id, page)
+
+    # -- page_complete (ALWAYS) --
+    await emit(
+        "page_complete",
+        page=page_number,
+        illustration_failed=illustration_failed,
+        audio_failed=audio_failed,
+    )
+    _page_elapsed_ms = round((time.perf_counter() - _page_start_time) * 1000)
+    logger.info(
+        "page streamed generation complete",
         extra={
             "event_type": "page_generation_complete",
             "session_id": session_id,

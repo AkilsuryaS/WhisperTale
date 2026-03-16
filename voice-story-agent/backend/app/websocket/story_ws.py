@@ -52,8 +52,8 @@ T-026  Page generation loop wired after character_bible_ready:
          After setup completes (character_bible_ready emitted), a background
          task runs the 5-page loop:
            for page_number in 1..5:
-               await run_page(...)                   # generates text, image, TTS
-               emit page_complete                     # fired by run_page
+               await run_page_streamed(...)           # Flash TEXT+IMAGE + Live narrator
+               emit page_complete                     # fired by run_page_streamed
                open steering window (10 s timer)      # await asyncio.sleep(10)
            emit story_complete
            update Session.status = complete
@@ -86,6 +86,7 @@ from app.dependencies import (
     get_setup_handler,
     get_store,
     get_story_planner,
+    get_story_stream_svc,
     get_tts_svc,
     get_voice_service,
 )
@@ -105,14 +106,13 @@ from app.models.safety import (
 from app.models.session import SessionStatus
 from app.services.adk_voice_service import VoiceTurn, VoiceSessionService
 from app.services.character_bible_service import CharacterBibleService
-from app.services.image_generation import ImageGenerationService
 from app.services.media_persistence import MediaPersistenceService
 from app.services.safety_service import SafetyService
 from app.services.session_store import SessionStore
 from app.services.edit_classifier import EditClassifierService
 from app.services.edit_handler import EditHandlerService
 from app.services.story_planner import StoryPlannerService
-from app.services.tts_service import TTSService
+from app.services.story_stream_service import StoryStreamService
 
 logger = logging.getLogger(__name__)
 
@@ -396,8 +396,7 @@ async def _page_generation_loop(
     store: SessionStore,
     story_planner: StoryPlannerService,
     character_bible_svc: CharacterBibleService,
-    image_svc: ImageGenerationService,
-    tts_svc: TTSService,
+    story_stream_svc: StoryStreamService,
     media_svc: MediaPersistenceService,
     safety_svc: SafetyService | None = None,
     voice_svc: VoiceSessionService | None = None,
@@ -410,7 +409,7 @@ async def _page_generation_loop(
 
     Sequence for each page:
       1. Fetch the current session to get the story arc.
-      2. Call run_page (emits page events via the WebSocket).
+      2. Call run_page_streamed (dual-Gemini: text+image + Live narrator).
          If ``page_loop_state.interrupt_event`` is set mid-narration, skip
          directly to the steering window (T-031).
       3. After page_complete: append first-25-word snippet of page text to the
@@ -425,7 +424,7 @@ async def _page_generation_loop(
         initial_page_history: Pre-seeded history from ``Session.page_history``
                               used when the loop is restarted after a reconnect.
     """
-    from app.websocket.page_orchestrator import run_page
+    from app.websocket.page_orchestrator import run_page_streamed
 
     # Ensure we have a state object (may be None when called from tests or REST)
     loop_state = page_loop_state or _PageLoopState()
@@ -474,18 +473,18 @@ async def _page_generation_loop(
             loop_state.interrupt_event.clear()
             loop_state.in_steering_window = False
 
-            # Run page generation; interrupt_event allows early exit to steering
+            # Run streamed page generation; interrupt_event allows early exit
             page_task = asyncio.ensure_future(
-                run_page(
+                run_page_streamed(
                     session_id=session_id,
                     page_number=page_number,
                     beat=beat,
                     page_history=page_history,
                     emit=ws_emit,
-                    story_planner=story_planner,
+                    ws=ws,
+                    story_stream_svc=story_stream_svc,
+                    voice_svc=voice_svc,
                     character_bible_svc=character_bible_svc,
-                    image_svc=image_svc,
-                    tts_svc=tts_svc,
                     media_svc=media_svc,
                     session_store=store,
                 )
@@ -619,16 +618,16 @@ async def _page_generation_loop(
                             if appended_current_page_history and page_history:
                                 page_history.pop()
                                 await store.update_page_history(session_id, page_history)
-                            await run_page(
+                            await run_page_streamed(
                                 session_id=session_id,
                                 page_number=page_number,
                                 beat=updated_beat,
                                 page_history=page_history,
                                 emit=ws_emit,
-                                story_planner=story_planner,
+                                ws=ws,
+                                story_stream_svc=story_stream_svc,
+                                voice_svc=voice_svc,
                                 character_bible_svc=character_bible_svc,
-                                image_svc=image_svc,
-                                tts_svc=tts_svc,
                                 media_svc=media_svc,
                                 session_store=store,
                             )
@@ -690,8 +689,7 @@ async def _turn_loop(
     setup_state: SetupState,
     story_planner: StoryPlannerService,
     character_bible_svc: CharacterBibleService,
-    image_svc: ImageGenerationService,
-    tts_svc: TTSService,
+    story_stream_svc: StoryStreamService,
     media_svc: MediaPersistenceService,
     page_loop_state: _PageLoopState | None = None,
 ) -> None:
@@ -805,8 +803,7 @@ async def _turn_loop(
                                             store=store,
                                             story_planner=story_planner,
                                             character_bible_svc=character_bible_svc,
-                                            image_svc=image_svc,
-                                            tts_svc=tts_svc,
+                                            story_stream_svc=story_stream_svc,
                                             media_svc=media_svc,
                                             safety_svc=safety_svc,
                                             voice_svc=voice_svc,
@@ -861,8 +858,7 @@ async def story_websocket(
     setup_handler: SetupHandler = Depends(get_setup_handler),
     story_planner: StoryPlannerService = Depends(get_story_planner),
     character_bible_svc: CharacterBibleService = Depends(get_character_bible_svc),
-    image_svc: ImageGenerationService = Depends(get_image_svc),
-    tts_svc: TTSService = Depends(get_tts_svc),
+    story_stream_svc: StoryStreamService = Depends(get_story_stream_svc),
     media_svc: MediaPersistenceService = Depends(get_media_svc),
 ) -> None:
     """
@@ -1008,8 +1004,7 @@ async def story_websocket(
                                 setup_state,
                                 story_planner,
                                 character_bible_svc,
-                                image_svc,
-                                tts_svc,
+                                story_stream_svc,
                                 media_svc,
                                 page_loop_state=page_loop_state,
                             )
@@ -1121,8 +1116,7 @@ async def story_websocket(
                                             store=store,
                                             story_planner=story_planner,
                                             character_bible_svc=character_bible_svc,
-                                            image_svc=image_svc,
-                                            tts_svc=tts_svc,
+                                            story_stream_svc=story_stream_svc,
                                             media_svc=media_svc,
                                             safety_svc=safety_svc,
                                             voice_svc=voice_svc,
@@ -1278,8 +1272,8 @@ async def story_websocket(
                             store=store,
                             story_planner=story_planner,
                             character_bible_svc=character_bible_svc,
-                            image_svc=image_svc,
-                            tts_svc=tts_svc,
+                            image_svc=get_image_svc(),
+                            tts_svc=get_tts_svc(),
                             media_svc=media_svc,
                         )
                         await handler.run_edit(session_id, decision, ws_emit)
@@ -1322,6 +1316,7 @@ async def story_websocket(
             except (asyncio.CancelledError, Exception):
                 pass
 
+        await voice_svc.end_narration(session_id)
         await voice_svc.end(session_id)
         logger.info(
             "WebSocket disconnected",

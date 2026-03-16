@@ -212,7 +212,14 @@ export interface PageGeneratingEvent {
   voice_commands_applied: string[];
 }
 
-/** Story text for this page is available. */
+/** Incremental text fragment streamed during page generation. */
+export interface PageTextChunkEvent {
+  type: "page_text_chunk";
+  page: number;
+  delta: string;
+}
+
+/** Story text for this page is available (full text after all chunks). */
 export interface PageTextReadyEvent {
   type: "page_text_ready";
   page: number;
@@ -368,6 +375,7 @@ export type WsServerEvent =
   | SafetyAcceptedEvent
   | SafetyRejectedEvent
   | PageGeneratingEvent
+  | PageTextChunkEvent
   | PageTextReadyEvent
   | PageImageReadyEvent
   | PageAudioReadyEvent
