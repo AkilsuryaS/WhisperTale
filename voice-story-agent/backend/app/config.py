@@ -51,6 +51,7 @@ class Settings(BaseSettings):
 
     # ── Imagen ────────────────────────────────────────────────────────────
     IMAGEN_MODEL: str = "imagen-4.0-fast-generate-001"
+    IMAGEN_FALLBACK_MODEL: str = "imagen-3.0-generate-002"
 
     # ── Gemini Live (bidi-streaming voice) ────────────────────────────────
     # Vertex AI Live API model (see https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/multimodal-live)
