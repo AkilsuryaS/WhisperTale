@@ -16,6 +16,12 @@ Key highlights:
 
 ---
 
+## Architecture
+
+![Architecture Diagram](voice-story-agent/architecture-diagram.png)
+
+---
+
 ## How It Works
 
 ```mermaid

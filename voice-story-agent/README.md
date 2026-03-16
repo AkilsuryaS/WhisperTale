@@ -17,6 +17,12 @@ Key highlights:
 
 ---
 
+## Architecture
+
+![Architecture Diagram](architecture-diagram.png)
+
+---
+
 ## How It Works
 
 ```mermaid
