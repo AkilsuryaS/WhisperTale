@@ -1,11 +1,11 @@
 """
 EditHandlerService — executes a classified EditDecision by routing to the
-appropriate regeneration path using existing services.
+native streaming regeneration path.
 
 Supports three scopes:
-    global_character — update CharacterBible, regenerate images for all pages
-    single_page      — rewrite text + image for one page
-    cascade          — rewrite text + image from page N through 5
+    global_character — update CharacterBible, regenerate all affected pages
+    single_page      — rewrite one page
+    cascade          — rewrite from page N through 5
 
 Emits WebSocket events via the ``emit`` callable passed by the caller
 (the story_ws handler).
@@ -13,19 +13,18 @@ Emits WebSocket events via the ``emit`` callable passed by the caller
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from datetime import datetime, timezone
 from typing import Callable
 
+from fastapi import WebSocket
+
 from app.models.edit import EditDecision, EditScope
-from app.models.page import Page, PageStatus
 from app.services.character_bible_service import CharacterBibleService
-from app.services.image_generation import ImageGenerationService
 from app.services.media_persistence import MediaPersistenceService
 from app.services.session_store import SessionStore
-from app.services.story_planner import StoryPlannerService
-from app.services.tts_service import TTSService, default_voice_config
+from app.services.story_stream_service import StoryStreamService
+from app.services.adk_voice_service import VoiceSessionService
+from app.websocket.page_orchestrator import run_page_streamed
 
 logger = logging.getLogger(__name__)
 
@@ -34,25 +33,25 @@ class EditHandlerService:
     """
     Executes an EditDecision against a session's story data.
 
-    Reuses existing services for all heavy lifting — no new Gemini or
-    Imagen integration is introduced.
+    Uses the same interleaved text/image stream and live narrator pipeline
+    as the main story-generation loop so edits stay consistent with creation.
     """
 
     def __init__(
         self,
         store: SessionStore,
-        story_planner: StoryPlannerService,
         character_bible_svc: CharacterBibleService,
-        image_svc: ImageGenerationService,
-        tts_svc: TTSService,
+        story_stream_svc: StoryStreamService,
+        voice_svc: VoiceSessionService | None,
         media_svc: MediaPersistenceService,
+        ws: WebSocket,
     ) -> None:
         self._store = store
-        self._story_planner = story_planner
         self._bible_svc = character_bible_svc
-        self._image_svc = image_svc
-        self._tts_svc = tts_svc
+        self._story_stream_svc = story_stream_svc
+        self._voice_svc = voice_svc
         self._media_svc = media_svc
+        self._ws = ws
 
     async def run_edit(
         self,
@@ -139,7 +138,7 @@ class EditHandlerService:
         for pn in range(1, first_affected):
             existing = await self._store.get_page(session_id, pn)
             if existing and existing.text:
-                page_history.append(" ".join(existing.text.split()[:25]))
+                page_history.append(existing.text)
 
         for page_num in sorted_pages:
             await self._regenerate_page(
@@ -148,7 +147,7 @@ class EditHandlerService:
             )
             updated = await self._store.get_page(session_id, page_num)
             if updated and updated.text:
-                page_history.append(" ".join(updated.text.split()[:25]))
+                page_history.append(updated.text)
 
     async def _handle_single_page(
         self,
@@ -179,8 +178,7 @@ class EditHandlerService:
         for pn in range(1, first_affected):
             existing_page = await self._store.get_page(session_id, pn)
             if existing_page and existing_page.text:
-                snippet = " ".join(existing_page.text.split()[:25])
-                page_history.append(snippet)
+                page_history.append(existing_page.text)
 
         for page_num in sorted_pages:
             instruction = decision.page_instructions.get(page_num)
@@ -193,8 +191,7 @@ class EditHandlerService:
             # Update page history for cascade coherence
             updated_page = await self._store.get_page(session_id, page_num)
             if updated_page and updated_page.text:
-                snippet = " ".join(updated_page.text.split()[:25])
-                page_history.append(snippet)
+                page_history.append(updated_page.text)
 
     async def _regenerate_page(
         self,
@@ -204,7 +201,7 @@ class EditHandlerService:
         emit: Callable,
         page_history: list[str] | None = None,
     ) -> None:
-        """Rewrite text, regenerate image and audio for one page."""
+        """Rewrite text, image, and narration for one page via native streaming."""
         await emit("page_regenerating", page=page_num)
 
         session = await self._store.get_session(session_id)
@@ -223,122 +220,68 @@ class EditHandlerService:
             for pn in range(1, page_num):
                 existing = await self._store.get_page(session_id, pn)
                 if existing and existing.text:
-                    snippet = " ".join(existing.text.split()[:25])
-                    page_history.append(snippet)
+                    page_history.append(existing.text)
 
-        text, narration_script = await self._story_planner.expand_page(
+        accumulated_text = ""
+
+        async def native_emit(event_type: str, **fields: object) -> None:
+            nonlocal accumulated_text
+
+            if event_type == "page_text_chunk":
+                delta = str(fields.get("delta", ""))
+                accumulated_text += delta
+                await emit(
+                    "page_text_updated",
+                    page=page_num,
+                    text=accumulated_text,
+                    narration_script=accumulated_text,
+                )
+                return
+
+            if event_type == "page_text_ready":
+                text = str(fields.get("text", accumulated_text))
+                accumulated_text = text
+                await emit(
+                    "page_text_updated",
+                    page=page_num,
+                    text=text,
+                    narration_script=text,
+                )
+                return
+
+            if event_type == "page_image_ready":
+                await emit(
+                    "page_image_updated",
+                    page=page_num,
+                    image_url=fields.get("image_url"),
+                    gcs_uri=fields.get("gcs_uri"),
+                )
+                return
+
+            if event_type == "page_audio_ready":
+                await emit(
+                    "page_audio_updated",
+                    page=page_num,
+                    audio_url=fields.get("audio_url"),
+                    gcs_uri=fields.get("gcs_uri"),
+                )
+                return
+
+            if event_type == "page_asset_failed":
+                await emit(event_type, **fields)
+
+        await run_page_streamed(
+            session_id=session_id,
+            page_number=page_num,
             beat=beat,
             page_history=page_history,
             bible=bible,
             edit_instruction=instruction,
+            emit=native_emit,
+            ws=self._ws,
+            story_stream_svc=self._story_stream_svc,
+            voice_svc=self._voice_svc,
+            character_bible_svc=self._bible_svc,
+            media_svc=self._media_svc,
+            session_store=self._store,
         )
-
-        # Persist updated page
-        page = Page(
-            page_number=page_num,
-            beat=beat,
-            text=text,
-            narration_script=narration_script,
-            status=PageStatus.text_ready,
-        )
-        await self._store.save_page(session_id, page)
-
-        await emit(
-            "page_text_updated",
-            page=page_num,
-            text=text,
-            narration_script=narration_script,
-        )
-
-        # Regenerate image and audio in parallel
-        image_task = self._regenerate_image(session_id, page_num, bible, emit, text)
-        audio_task = self._regenerate_audio(session_id, page_num, narration_script, emit)
-        await asyncio.gather(image_task, audio_task, return_exceptions=True)
-
-        # Mark page as complete
-        page.status = PageStatus.complete
-        page.generated_at = datetime.now(timezone.utc)
-        await self._store.save_page(session_id, page)
-
-    async def _regenerate_image(
-        self,
-        session_id: str,
-        page_num: int,
-        bible,
-        emit: Callable,
-        page_text: str | None = None,
-    ) -> None:
-        """Regenerate the illustration for a single page."""
-        try:
-            if page_text is None:
-                existing_page = await self._store.get_page(session_id, page_num)
-                if existing_page and existing_page.text:
-                    page_text = existing_page.text
-                else:
-                    logger.warning(
-                        "EditHandlerService: no page text for image regen "
-                        "(session=%s, page=%d)",
-                        session_id, page_num,
-                    )
-                    return
-
-            prompt = self._bible_svc.build_image_prompt(bible, page_text, page_num)
-            png_bytes = await self._image_svc.generate(prompt)
-            gcs_uri = await self._media_svc.store_illustration(
-                session_id, page_num, png_bytes
-            )
-            signed_url = await self._media_svc.get_signed_url(gcs_uri)
-
-            await emit(
-                "page_image_updated",
-                page=page_num,
-                image_url=signed_url,
-                gcs_uri=gcs_uri,
-            )
-        except Exception as exc:
-            logger.warning(
-                "EditHandlerService: image regeneration failed "
-                "(session=%s, page=%d): %s",
-                session_id, page_num, exc,
-            )
-            await emit(
-                "page_asset_failed",
-                page=page_num,
-                asset_type="illustration",
-                error=str(exc),
-            )
-
-    async def _regenerate_audio(
-        self,
-        session_id: str,
-        page_num: int,
-        narration_script: str,
-        emit: Callable,
-    ) -> None:
-        """Regenerate the narration audio for a single page."""
-        try:
-            voice_config = default_voice_config()
-            mp3_bytes = await self._tts_svc.synthesize(narration_script, voice_config)
-            gcs_uri = await self._media_svc.store_narration(
-                session_id, page_num, mp3_bytes
-            )
-            signed_url = await self._media_svc.get_signed_url(gcs_uri)
-
-            await emit(
-                "page_audio_updated",
-                page=page_num,
-                audio_url=signed_url,
-                gcs_uri=gcs_uri,
-            )
-        except Exception as exc:
-            logger.warning(
-                "EditHandlerService: audio regeneration failed "
-                "(session=%s, page=%d): %s",
-                session_id, page_num, exc,
-            )
-            await emit(
-                "page_asset_failed",
-                page=page_num,
-                asset_type="narration",
-                error=str(exc),
-            )

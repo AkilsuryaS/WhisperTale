@@ -45,6 +45,8 @@ export interface StoryPageProps {
   onEditRequest?: (instruction: string) => void;
   /** True while any edit is in progress. */
   isEditing?: boolean;
+  /** Whether stored page audio should autoplay when present. */
+  autoPlayStoredAudio?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +110,7 @@ export function StoryPage({
   storyComplete = false,
   onEditRequest,
   isEditing = false,
+  autoPlayStoredAudio = false,
 }: StoryPageProps) {
   const hasText = page.text !== null;
   const hasImage = page.imageUrl !== null;
@@ -117,7 +120,7 @@ export function StoryPage({
 
   useEffect(() => {
     if (!audioRef.current) return;
-    if (isActive && page.audioUrl && !isNarrationPaused) {
+    if (isActive && page.audioUrl && !isNarrationPaused && autoPlayStoredAudio) {
       audioRef.current.play().catch((err) => {
         console.warn(`[StoryPage] audio.play() blocked (page ${pageNumber}):`, err);
       });
@@ -127,7 +130,7 @@ export function StoryPage({
     } else if (isNarrationPaused) {
       audioRef.current.pause();
     }
-  }, [isActive, page.audioUrl, isNarrationPaused, pageNumber]);
+  }, [isActive, page.audioUrl, isNarrationPaused, pageNumber, autoPlayStoredAudio]);
 
   return (
     <article

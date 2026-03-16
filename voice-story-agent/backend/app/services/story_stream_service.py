@@ -84,6 +84,7 @@ def _build_prompt(
     beat: str,
     page_history: list[str],
     bible: CharacterBible,
+    edit_instruction: str | None = None,
 ) -> str:
     protagonist = bible.protagonist
     exclusions = bible.content_policy.exclusions
@@ -102,6 +103,16 @@ def _build_prompt(
         "\n".join(f"  • {ex}" for ex in exclusions)
         if exclusions
         else "  (none)"
+    )
+
+    edit_block = (
+        "\n"
+        f"EDIT INSTRUCTION\n"
+        f"  {edit_instruction}\n"
+        f"\n"
+        "Apply this edit while preserving continuity with the rest of the story.\n"
+        if edit_instruction
+        else ""
     )
 
     return (
@@ -126,6 +137,7 @@ def _build_prompt(
         f"PAGE HISTORY (narrative context from prior pages):\n"
         f"{history_block}\n"
         f"\n"
+        f"{edit_block}"
         f"CONTENT EXCLUSIONS (must not appear in the text or illustration):\n"
         f"{exclusion_block}\n"
     )
@@ -185,6 +197,7 @@ class StoryStreamService:
         beat: str,
         page_history: list[str],
         bible: CharacterBible,
+        edit_instruction: str | None = None,
     ) -> AsyncIterator[StreamChunk]:
         """
         Stream text chunks and image blobs for a single story page.
@@ -194,7 +207,7 @@ class StoryStreamService:
         image bytes (e.g. persisting to GCS).
         """
         client = self._get_client()
-        prompt = _build_prompt(beat, page_history, bible)
+        prompt = _build_prompt(beat, page_history, bible, edit_instruction)
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
@@ -252,6 +265,7 @@ class StoryStreamService:
         page_history: list[str],
         bible: CharacterBible,
         page_text: str,
+        edit_instruction: str | None = None,
     ) -> ImageChunk | None:
         """
         Best-effort fallback: request a single illustration when the streamed call
@@ -259,7 +273,7 @@ class StoryStreamService:
         """
         client = self._get_client()
         prompt = (
-            _build_prompt(beat, page_history, bible)
+            _build_prompt(beat, page_history, bible, edit_instruction)
             + "\n\nPAGE TEXT TO ILLUSTRATE:\n"
             + page_text
             + "\n\nGenerate exactly one image for this page."

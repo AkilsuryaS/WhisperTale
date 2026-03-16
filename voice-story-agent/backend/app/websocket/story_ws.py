@@ -80,14 +80,12 @@ from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 
 from app.dependencies import (
     get_character_bible_svc,
-    get_image_svc,
     get_media_svc,
     get_safety_service,
     get_setup_handler,
     get_store,
     get_story_planner,
     get_story_stream_svc,
-    get_tts_svc,
     get_voice_service,
 )
 from app.websocket.setup_handler import SetupHandler, SetupState
@@ -515,6 +513,7 @@ async def _page_generation_loop(
                     beat=beat,
                     page_history=page_history,
                     bible=current_bible,
+                    edit_instruction=None,
                     emit=ws_emit,
                     ws=ws,
                     story_stream_svc=story_stream_svc,
@@ -659,6 +658,7 @@ async def _page_generation_loop(
                                 beat=updated_beat,
                                 page_history=page_history,
                                 bible=current_bible,
+                                edit_instruction=None,
                                 emit=ws_emit,
                                 ws=ws,
                                 story_stream_svc=story_stream_svc,
@@ -1305,11 +1305,11 @@ async def story_websocket(
 
                         handler = EditHandlerService(
                             store=store,
-                            story_planner=story_planner,
                             character_bible_svc=character_bible_svc,
-                            image_svc=get_image_svc(),
-                            tts_svc=get_tts_svc(),
+                            story_stream_svc=story_stream_svc,
+                            voice_svc=voice_svc,
                             media_svc=media_svc,
+                            ws=websocket,
                         )
                         await handler.run_edit(session_id, decision, ws_emit)
                     except Exception as exc:

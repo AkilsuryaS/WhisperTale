@@ -400,6 +400,7 @@ async def run_page_streamed(
     beat: str,
     page_history: list[str],
     bible,
+    edit_instruction: str | None,
     emit: Callable,
     ws: WebSocket,
     story_stream_svc: StoryStreamService,
@@ -461,7 +462,7 @@ async def run_page_streamed(
 
         try:
             async for chunk in story_stream_svc.generate_page_stream(
-                beat, page_history, bible
+                beat, page_history, bible, edit_instruction
             ):
                 if isinstance(chunk, TextChunk):
                     full_text_parts.append(chunk.text)
@@ -664,6 +665,7 @@ async def run_page_streamed(
                 page_history=page_history,
                 bible=bible,
                 page_text=full_text,
+                edit_instruction=edit_instruction,
             )
             if fallback is not None:
                 gcs_uri = await media_svc.store_illustration(

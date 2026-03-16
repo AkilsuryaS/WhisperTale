@@ -17,7 +17,7 @@ from typing import Any, Optional
 from google import genai
 from google.genai import types as genai_types
 
-from app.config import settings, get_genai_client
+from app.config import settings, get_genai_live_client
 from app.models.edit import EditDecision, EditScope
 from app.services.session_store import SessionStore
 
@@ -154,7 +154,7 @@ class EditClassifierService:
 
     def _get_client(self) -> genai.Client:
         if self._client is None:
-            self._client = get_genai_client("EditClassifierService")
+            self._client = get_genai_live_client("EditClassifierService")
         return self._client
 
     def _get_store(self) -> SessionStore:
@@ -215,16 +215,43 @@ class EditClassifierService:
 
         client = self._get_client()
         try:
-            response = await client.aio.models.generate_content(
-                model=settings.GEMINI_FLASH_MODEL,
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    system_instruction=_CLASSIFIER_SYSTEM_PROMPT,
-                    response_mime_type="application/json",
-                    temperature=0.2,
+            async with client.aio.live.connect(
+                model=settings.GEMINI_LIVE_MODEL,
+                config=genai_types.LiveConnectConfig(
+                    responseModalities=[genai_types.Modality.TEXT],
+                    systemInstruction=genai_types.Content(
+                        parts=[genai_types.Part(text=_CLASSIFIER_SYSTEM_PROMPT)],
+                        role="user",
+                    ),
                 ),
-            )
-            raw_text = response.text or ""
+            ) as session:
+                await session.send_client_content(
+                    turns=[
+                        genai_types.Content(
+                            parts=[genai_types.Part(text=prompt)],
+                            role="user",
+                        )
+                    ],
+                    turn_complete=True,
+                )
+
+                response_parts: list[str] = []
+                async for response in session.receive():
+                    server_content = getattr(response, "server_content", None)
+                    if server_content is None:
+                        continue
+
+                    model_turn = getattr(server_content, "model_turn", None)
+                    if model_turn is not None:
+                        for part in getattr(model_turn, "parts", []):
+                            part_text = getattr(part, "text", None)
+                            if part_text:
+                                response_parts.append(part_text)
+
+                    if getattr(server_content, "turn_complete", False):
+                        break
+
+            raw_text = "".join(response_parts)
             data: dict[str, Any] = _parse_gemini_json(raw_text)
         except Exception as exc:
             logger.error(
