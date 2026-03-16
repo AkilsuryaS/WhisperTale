@@ -71,8 +71,8 @@ _PAGE_WORD_MAX = 120
 # ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT = """\
-You are an expert children's story planner. Create a five-beat narrative arc
-for an interactive bedtime story aimed at children aged 4–10.
+You are an expert story planner. Create a five-beat narrative arc
+for an interactive bedtime story.
 
 NARRATIVE STRUCTURE (one beat per page):
   Page 1 — Opening:      Introduce the characters and setting; establish tone.
@@ -87,7 +87,9 @@ BEAT REQUIREMENTS:
   • Each beat must reference the characters and setting directly.
   • If a STORY PREMISE is provided, the arc MUST follow that premise faithfully —
     use the character names given, honour the plot dynamic described.
-  • Use warm, imaginative, age-appropriate language.
+  • The characters MUST match the ages/descriptions given in the story parameters.
+    Do NOT make characters younger or older than described.
+  • Use warm, imaginative language appropriate for the described characters.
   • Do NOT include any content listed under CONTENT POLICY constraints.
 
 OUTPUT FORMAT — respond ONLY with a single valid JSON object, no prose, no \
@@ -153,23 +155,25 @@ def _validate_beats(data: dict[str, Any]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 _EXPAND_PAGE_SYSTEM_PROMPT = """\
-You are an expert children's story author writing one page of an illustrated
-bedtime story for children aged 4–10.
+You are an expert story author writing one page of an illustrated
+bedtime story.
 
 YOUR TASK:
   Write the text for a single story page and a matching narration script.
 
 TEXT REQUIREMENTS:
   • Exactly 60–120 words (count carefully).
-  • Written in warm, vivid, age-appropriate prose.
+  • Written in warm, vivid prose appropriate for the characters described.
   • Must directly advance the CURRENT BEAT provided.
   • Must maintain narrative continuity with PAGE HISTORY (if any).
   • Must reference the characters by the names given in the CURRENT BEAT.
+  • Characters MUST match the ages and descriptions given — do NOT make them
+    younger or older than described.
   • Must NOT include any content from CONTENT EXCLUSIONS.
 
 NARRATION SCRIPT REQUIREMENTS:
   • A fluent read-aloud version of the page text suitable for a warm, expressive
-    children's storyteller voice.
+    storyteller voice.
   • Written for a TTS narrator — no stage directions, no parenthetical notes.
   • Include natural emotional variation: wonder, excitement, gentle suspense.
   • Use short sentences and pauses (signalled by em-dashes or ellipses) for
@@ -182,8 +186,8 @@ OUTPUT FORMAT — respond ONLY with valid JSON, no prose, no markdown:
 """
 
 _EXPAND_PAGE_STRICT_SYSTEM_PROMPT = """\
-You are an expert children's story author writing one page of an illustrated
-bedtime story for children aged 4–10.
+You are an expert story author writing one page of an illustrated
+bedtime story.
 
 CRITICAL INSTRUCTION: The text field MUST be between 60 and 120 words — count
 every word before responding. Previous attempt was outside this range.
@@ -193,14 +197,15 @@ YOUR TASK:
 
 TEXT REQUIREMENTS:
   • MUST be 60–120 words (hard requirement — recount before submitting).
-  • Written in warm, vivid, age-appropriate prose.
+  • Written in warm, vivid prose appropriate for the characters described.
   • Must directly advance the CURRENT BEAT provided.
   • Must maintain narrative continuity with PAGE HISTORY (if any).
+  • Characters MUST match the ages and descriptions given.
   • Must NOT include any content from CONTENT EXCLUSIONS.
 
 NARRATION SCRIPT REQUIREMENTS:
   • A fluent read-aloud version of the page text suitable for a warm, expressive
-    children's storyteller voice.
+    storyteller voice.
   • Written for a TTS narrator — no stage directions, no parenthetical notes.
   • Include natural emotional variation: wonder, excitement, gentle suspense.
   • Use short sentences and pauses (em-dashes or ellipses) for dramatic effect.
@@ -250,12 +255,21 @@ def _build_expand_page_prompt(
         else ""
     )
 
+    age_line = f"  Age:         {protagonist.age}\n" if getattr(protagonist, "age", None) else ""
+    desc_line = (
+        f"  Full desc:   {protagonist.description}\n"
+        if getattr(protagonist, "description", None)
+        else ""
+    )
+
     return (
         f"PROTAGONIST\n"
         f"  Name:        {protagonist.name}\n"
+        f"{age_line}"
         f"  Description: {protagonist.species_or_type}, {protagonist.color}"
         + (f", {protagonist.attire}" if protagonist.attire else "")
         + "\n"
+        f"{desc_line}"
         f"  Traits:      {', '.join(protagonist.notable_traits)}\n"
         f"\n"
         f"STORY TONE: {mood}\n"

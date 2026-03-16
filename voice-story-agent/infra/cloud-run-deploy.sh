@@ -161,7 +161,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --max-instances=10 \
   --memory=512Mi \
   --cpu=1 \
-  --timeout=300 \
+  --timeout=600 \
   --concurrency=80 \
   --port=8080 \
   --project="${PROJECT_ID}" \

@@ -79,20 +79,26 @@ BASE_EXCLUSIONS: list[str] = [
 # ---------------------------------------------------------------------------
 
 _SYSTEM_PROMPT = """\
-You are a children's book art director and character designer. Given a story \
+You are a book art director and character designer. Given a story \
 protagonist description and a narrative tone, derive the visual and stylistic \
-properties needed to illustrate a consistent, age-appropriate bedtime story \
-for children aged 4–10.
+properties needed to illustrate a consistent bedtime story.
+
+IMPORTANT: Pay close attention to the protagonist description. If a specific \
+age is mentioned (e.g. "20 year old", "teenage"), the character MUST be \
+depicted at that age. Do NOT default to drawing children unless the \
+description explicitly says the character is a child.
 
 OUTPUT FORMAT — respond ONLY with a single valid JSON object, no prose, no \
 markdown, no code fences:
 
 {
   "protagonist": {
-    "species_or_type": "<the character type, e.g. rabbit, fox, fairy, robot>",
-    "color":           "<primary color from the description, e.g. blue, golden>",
+    "species_or_type": "<the character type, e.g. human, rabbit, fox, fairy, robot>",
+    "color":           "<primary color from the description, e.g. blue, golden, brown-haired>",
     "attire":          "<clothing or accessories if explicitly mentioned, else null>",
-    "notable_traits":  ["<2 to 4 distinctive visual traits for consistent illustration>"]
+    "notable_traits":  ["<2 to 4 distinctive visual traits for consistent illustration>"],
+    "age":             "<age or age range from the description, e.g. '20', 'teenager', 'elderly', or null if not specified>",
+    "description":     "<short summary of the original protagonist description>"
   },
   "style_bible": {
     "art_style":             "<illustration style matching the tone, e.g. soft watercolour>",
@@ -105,9 +111,11 @@ markdown, no code fences:
 RULES:
 - notable_traits must contain between 2 and 4 items (no more, no less).
 - notable_traits must be concrete visual properties (color, size, accessory).
+- age must be extracted verbatim from the protagonist description if present.
+- description must faithfully summarise the original protagonist description.
 - mood must reflect the provided tone word.
 - negative_style_terms must include at least 2 items that prevent scary or \
-  adult visual elements.
+  inappropriate visual elements.
 - Do NOT invent a name — that is provided separately.
 """
 
@@ -169,6 +177,8 @@ def _parse_bible_data(
         color=str(protagonist_data.get("color", "")).strip(),
         attire=protagonist_data.get("attire") or None,
         notable_traits=[str(t).strip() for t in traits],
+        age=protagonist_data.get("age") or None,
+        description=protagonist_data.get("description") or None,
     )
     style_bible = StyleBible(
         art_style=str(style_data.get("art_style", "")).strip(),
@@ -345,8 +355,10 @@ class CharacterBibleService:
         # Build protagonist description block
         attire_clause = f", wearing {p.attire}" if p.attire else ""
         traits_clause = ", ".join(p.notable_traits) if p.notable_traits else ""
+        age_clause = f", {p.age} years old" if getattr(p, "age", None) else ""
         protagonist_desc = (
             f"a {p.color} {p.species_or_type} named {p.name}"
+            f"{age_clause}"
             f"{attire_clause}"
             + (f" with {traits_clause}" if traits_clause else "")
         )
@@ -371,7 +383,7 @@ class CharacterBibleService:
             negatives = f"{negatives}, {neg_style}"
 
         text_prompt = (
-            f"{sb.art_style} illustration for a children's bedtime story. "
+            f"{sb.art_style} illustration for a bedtime story. "
             f"Scene: {page_scene.strip()} "
             f"Main character: {protagonist_desc}. "
             f"Art style: {sb.art_style}, color palette: {sb.color_palette}, "

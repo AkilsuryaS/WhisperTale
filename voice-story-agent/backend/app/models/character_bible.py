@@ -40,6 +40,8 @@ class ProtagonistProfile(BaseModel):
     attire: Optional[str] = None
     # 2–4 visual traits used in image prompts
     notable_traits: list[str] = Field(..., min_length=2, max_length=4)
+    age: Optional[str] = None
+    description: Optional[str] = None
     # Null until page-1 illustration PageAsset is ready
     reference_image_gcs_uri: Optional[str] = None
 

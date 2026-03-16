@@ -1,0 +1,14 @@
+GCP_PROJECT_ID: whispertale-dev
+GCP_REGION: us-central1
+GCS_BUCKET_NAME: whispertale-dev-story-assets
+FIRESTORE_DATABASE: (default)
+GEMINI_PRO_MODEL: gemini-2.5-pro
+GEMINI_FLASH_MODEL: gemini-2.5-flash
+GEMINI_FLASH_IMAGE_MODEL: gemini-2.5-flash-image
+IMAGEN_MODEL: imagen-4.0-fast-generate-001
+GEMINI_LIVE_MODEL: gemini-2.0-flash-live-preview-04-09
+TTS_VOICE_NAME: en-US-Journey-F
+TTS_LANGUAGE_CODE: en-US
+ADK_AGENT_NAME: voice-story-agent
+PYTHONUNBUFFERED: "1"
+CORS_ORIGINS: "http://localhost:3000,https://whispertale-dev.web.app,https://whispertale-dev.firebaseapp.com,https://voice-story-frontend--whispertale-dev.us-central1.hosted.app,https://voice-story-ui--whispertale-dev.us-east4.hosted.app"

@@ -31,7 +31,7 @@ from app.config import settings, get_genai_client
 from app.models.character_bible import CharacterBible
 
 logger = logging.getLogger(__name__)
-_FLASH_IMAGE_MIN_REQUEST_INTERVAL_SECONDS = 25.0
+_FLASH_IMAGE_MIN_REQUEST_INTERVAL_SECONDS = 6.0
 
 
 @dataclass
@@ -50,15 +50,15 @@ class ImageChunk:
 StreamChunk = Union[TextChunk, ImageChunk]
 
 _SYSTEM_PROMPT = """\
-You are an expert children's story author and illustrator creating one page \
-of an illustrated bedtime story for children aged 4–10.
+You are an expert story author and illustrator creating one page \
+of an illustrated bedtime story.
 
 YOUR TASK:
   Write the story text for this page AND generate a single beautiful \
 illustration for it.
 
 TEXT REQUIREMENTS:
-  • 60–120 words of warm, vivid, age-appropriate prose.
+  • 60–120 words of warm, vivid prose.
   • Must directly advance the CURRENT BEAT provided.
   • Must maintain narrative continuity with PAGE HISTORY (if any).
   • For pages 2–5, CONTINUE the story naturally; do not restart or reintroduce \
@@ -70,7 +70,10 @@ TEXT REQUIREMENTS:
 
 ILLUSTRATION REQUIREMENTS:
   • Generate exactly ONE illustration that captures the key moment of this page.
-  • Use a warm, child-friendly art style matching the STYLE DESCRIPTION.
+  • Use a warm art style matching the STYLE DESCRIPTION.
+  • CRITICALLY: depict the protagonist at the EXACT AGE specified in the \
+    PROTAGONIST section. If the protagonist is described as 20 years old, \
+    draw a 20-year-old — NOT a child. Match their physical description exactly.
   • Feature the protagonist prominently with the visual traits described.
   • Match the mood and setting described.
   • Keep recurring characters, outfits, colors, and key props visually \
@@ -115,12 +118,19 @@ def _build_prompt(
         else ""
     )
 
+    age_line = f"  Age:         {protagonist.age}\n" if protagonist.age else ""
+    desc_line = (
+        f"  Full desc:   {protagonist.description}\n" if protagonist.description else ""
+    )
+
     return (
         f"PROTAGONIST\n"
         f"  Name:        {protagonist.name}\n"
+        f"{age_line}"
         f"  Description: {protagonist.species_or_type}, {protagonist.color}"
         + (f", {protagonist.attire}" if protagonist.attire else "")
         + "\n"
+        f"{desc_line}"
         f"  Traits:      {', '.join(protagonist.notable_traits)}\n"
         f"\n"
         f"STYLE DESCRIPTION\n"
@@ -211,7 +221,6 @@ class StoryStreamService:
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
-                await self._wait_for_image_quota_window()
                 response = await client.aio.models.generate_content_stream(
                     model=settings.GEMINI_FLASH_IMAGE_MODEL,
                     contents=prompt,

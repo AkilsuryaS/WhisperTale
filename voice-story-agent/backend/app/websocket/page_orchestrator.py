@@ -45,7 +45,7 @@ from app.services.tts_service import TTSService, default_voice_config
 
 logger = logging.getLogger(__name__)
 _LIVE_AUDIO_SAMPLE_RATE = 24000
-_FALLBACK_IMAGE_TIMEOUT_SECONDS = 8.0
+_FALLBACK_IMAGE_TIMEOUT_SECONDS = 15.0
 
 
 def _pcm_to_wav_bytes(
