@@ -54,7 +54,8 @@ T-026  Page generation loop wired after character_bible_ready:
            for page_number in 1..5:
                await run_page_streamed(...)           # Flash TEXT+IMAGE + Live narrator
                emit page_complete                     # fired by run_page_streamed
-               open steering window (10 s timer)      # await asyncio.sleep(10)
+               open steering window between early pages
+               skip the passive pause before page 5 so the ending starts promptly
            emit story_complete
            update Session.status = complete
 
@@ -576,9 +577,15 @@ async def _page_generation_loop(
                         exc,
                     )
 
-            # Steering window between pages (not after the last page)
-            if page_number < 5:
-                was_user_interrupt = loop_state.user_interrupted
+            # Steering window between pages (not after the last page).
+            # We intentionally skip the passive page-4 -> page-5 pause so the
+            # ending begins promptly; an explicit user interrupt can still open
+            # a steering window before the final page.
+            was_user_interrupt = loop_state.user_interrupted
+            should_open_steering_window = page_number < 5 and (
+                page_number < 4 or was_user_interrupt
+            )
+            if should_open_steering_window:
                 effective_timeout = (
                     _USER_INTERRUPT_TIMEOUT
                     if was_user_interrupt

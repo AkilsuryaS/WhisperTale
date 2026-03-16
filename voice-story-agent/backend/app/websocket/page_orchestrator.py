@@ -45,6 +45,7 @@ from app.services.tts_service import TTSService, default_voice_config
 
 logger = logging.getLogger(__name__)
 _LIVE_AUDIO_SAMPLE_RATE = 24000
+_FALLBACK_IMAGE_TIMEOUT_SECONDS = 8.0
 
 
 def _pcm_to_wav_bytes(
@@ -658,14 +659,18 @@ async def run_page_streamed(
         await emit("page_text_ready", page=page_number, text=full_text)
 
     # -- Fallback image request when streaming call produced text but no image --
+    # Best-effort only: never let this block page completion indefinitely.
     if not image_succeeded and full_text:
         try:
-            fallback = await story_stream_svc.generate_image_only(
-                beat=beat,
-                page_history=page_history,
-                bible=bible,
-                page_text=full_text,
-                edit_instruction=edit_instruction,
+            fallback = await asyncio.wait_for(
+                story_stream_svc.generate_image_only(
+                    beat=beat,
+                    page_history=page_history,
+                    bible=bible,
+                    page_text=full_text,
+                    edit_instruction=edit_instruction,
+                ),
+                timeout=_FALLBACK_IMAGE_TIMEOUT_SECONDS,
             )
             if fallback is not None:
                 gcs_uri = await media_svc.store_illustration(
@@ -690,6 +695,14 @@ async def run_page_streamed(
                         "asset_type": "illustration",
                     },
                 )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "run_page_streamed: fallback image request timed out "
+                "(session=%s, page=%d, timeout=%.1fs)",
+                session_id,
+                page_number,
+                _FALLBACK_IMAGE_TIMEOUT_SECONDS,
+            )
         except Exception as exc:
             logger.warning(
                 "run_page_streamed: fallback image request failed "
