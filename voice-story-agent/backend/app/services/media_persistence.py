@@ -149,6 +149,13 @@ class MediaPersistenceService:
         key = f"sessions/{session_id}/pages/{page}/narration.mp3"
         return await self._upload(key, audio_bytes, content_type="audio/mpeg")
 
+    async def store_live_narration(
+        self, session_id: str, page: int, audio_bytes: bytes
+    ) -> str:
+        """Upload live narrator WAV audio and return its gs:// URI."""
+        key = f"sessions/{session_id}/pages/{page}/narration.wav"
+        return await self._upload(key, audio_bytes, content_type="audio/wav")
+
     async def store_character_ref(
         self, session_id: str, char_id: str, image_bytes: bytes
     ) -> str:

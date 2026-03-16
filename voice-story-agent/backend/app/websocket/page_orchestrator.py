@@ -20,8 +20,10 @@ Asset failures MUST NOT propagate; they are caught, logged, and reflected via
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 import time
+import wave
 from datetime import datetime, timezone
 from typing import Callable
 
@@ -42,6 +44,24 @@ from app.services.story_stream_service import (
 from app.services.tts_service import TTSService, default_voice_config
 
 logger = logging.getLogger(__name__)
+_LIVE_AUDIO_SAMPLE_RATE = 24000
+
+
+def _pcm_to_wav_bytes(
+    pcm_bytes: bytes,
+    *,
+    sample_rate: int = _LIVE_AUDIO_SAMPLE_RATE,
+    sample_width: int = 2,
+    channels: int = 1,
+) -> bytes:
+    """Wrap raw little-endian PCM bytes in a WAV container."""
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav_file:
+        wav_file.setnchannels(channels)
+        wav_file.setsampwidth(sample_width)
+        wav_file.setframerate(sample_rate)
+        wav_file.writeframes(pcm_bytes)
+    return buffer.getvalue()
 
 
 # ---------------------------------------------------------------------------
@@ -379,6 +399,7 @@ async def run_page_streamed(
     page_number: int,
     beat: str,
     page_history: list[str],
+    bible,
     emit: Callable,
     ws: WebSocket,
     story_stream_svc: StoryStreamService,
@@ -416,8 +437,6 @@ async def run_page_streamed(
     )
     _page_start_time = time.perf_counter()
 
-    bible = await session_store.get_character_bible(session_id)
-
     # -- Start narrator Live session --
     narrator_available = False
     if voice_svc is not None:
@@ -434,6 +453,7 @@ async def run_page_streamed(
 
     # -- Shared state between concurrent tasks --
     full_text_parts: list[str] = []
+    audio_frames: list[bytes] = []
 
     async def _visual_consumer() -> None:
         """Consume the visual stream: emit text chunks, pipe to narrator, handle images."""
@@ -533,6 +553,7 @@ async def run_page_streamed(
                 session_id
             ):
                 try:
+                    audio_frames.append(pcm_frame)
                     await ws.send_bytes(pcm_frame)
                 except Exception:
                     break
@@ -577,6 +598,38 @@ async def run_page_streamed(
     # -- Close narrator session --
     if voice_svc is not None:
         await voice_svc.end_narration(session_id)
+
+    if narrator_available:
+        if audio_frames:
+            try:
+                wav_bytes = _pcm_to_wav_bytes(b"".join(audio_frames))
+                gcs_uri = await media_svc.store_live_narration(
+                    session_id, page_number, wav_bytes
+                )
+                signed_url = await media_svc.get_signed_url(gcs_uri)
+                await emit(
+                    "page_audio_ready",
+                    page=page_number,
+                    audio_url=signed_url,
+                    gcs_uri=gcs_uri,
+                )
+            except Exception as exc:
+                audio_failed = True
+                logger.warning(
+                    "run_page_streamed: live narration persistence failed "
+                    "(session=%s, page=%d): %s",
+                    session_id,
+                    page_number,
+                    exc,
+                )
+        else:
+            audio_failed = True
+            await emit(
+                "page_asset_failed",
+                page=page_number,
+                asset_type="narration",
+                error="Narrator produced no audio frames",
+            )
 
     # -- If no image was produced by the model, flag it --
     if not image_succeeded and not illustration_failed:
@@ -650,6 +703,10 @@ async def run_page_streamed(
             await character_bible_svc.set_reference_image(
                 session_id, image_gcs_uri
             )
+            try:
+                bible.protagonist.reference_image_gcs_uri = image_gcs_uri
+            except Exception:
+                pass
         except Exception as exc:
             logger.warning(
                 "run_page_streamed: set_reference_image failed "

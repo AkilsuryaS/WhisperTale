@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass
 from typing import AsyncIterator, Union
 
@@ -30,6 +31,7 @@ from app.config import settings, get_genai_client
 from app.models.character_bible import CharacterBible
 
 logger = logging.getLogger(__name__)
+_FLASH_IMAGE_MIN_REQUEST_INTERVAL_SECONDS = 25.0
 
 
 @dataclass
@@ -59,6 +61,10 @@ TEXT REQUIREMENTS:
   • 60–120 words of warm, vivid, age-appropriate prose.
   • Must directly advance the CURRENT BEAT provided.
   • Must maintain narrative continuity with PAGE HISTORY (if any).
+  • For pages 2–5, CONTINUE the story naturally; do not restart or reintroduce \
+    the characters from scratch.
+  • Start with a complete sentence. Never begin with ellipses, fragments, or \
+    scene-setting repetition from earlier pages.
   • Must reference the characters by the names given in the CURRENT BEAT.
   • Must NOT include any content from CONTENT EXCLUSIONS.
 
@@ -67,6 +73,8 @@ ILLUSTRATION REQUIREMENTS:
   • Use a warm, child-friendly art style matching the STYLE DESCRIPTION.
   • Feature the protagonist prominently with the visual traits described.
   • Match the mood and setting described.
+  • Keep recurring characters, outfits, colors, and key props visually \
+    consistent across all pages unless the CURRENT BEAT explicitly changes them.
 
 Write the story text first, then generate the illustration.
 """
@@ -80,6 +88,7 @@ def _build_prompt(
     protagonist = bible.protagonist
     exclusions = bible.content_policy.exclusions
     style = bible.style_bible
+    page_number = len(page_history) + 1
 
     history_block = (
         "\n".join(
@@ -108,6 +117,9 @@ def _build_prompt(
         f"  Color palette:  {style.color_palette}\n"
         f"  Mood:           {style.mood}\n"
         f"\n"
+        f"PAGE NUMBER\n"
+        f"  This is page {page_number} of 5.\n"
+        f"\n"
         f"CURRENT BEAT (what happens on this page):\n"
         f"  {beat}\n"
         f"\n"
@@ -135,11 +147,26 @@ class StoryStreamService:
 
     def __init__(self, client: genai.Client | None = None) -> None:
         self._client = client
+        self._request_lock = asyncio.Lock()
+        self._last_request_started_at = 0.0
 
     def _get_client(self) -> genai.Client:
         if self._client is None:
             self._client = get_genai_client("StoryStreamService", location="global")
         return self._client
+
+    async def _wait_for_image_quota_window(self) -> None:
+        async with self._request_lock:
+            now = time.monotonic()
+            elapsed = now - self._last_request_started_at
+            wait_for = _FLASH_IMAGE_MIN_REQUEST_INTERVAL_SECONDS - elapsed
+            if wait_for > 0:
+                logger.info(
+                    "StoryStreamService: waiting %.1fs before next flash-image request",
+                    wait_for,
+                )
+                await asyncio.sleep(wait_for)
+            self._last_request_started_at = time.monotonic()
 
     @staticmethod
     def _is_retryable_error(exc: Exception) -> bool:
@@ -171,6 +198,7 @@ class StoryStreamService:
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
+                await self._wait_for_image_quota_window()
                 response = await client.aio.models.generate_content_stream(
                     model=settings.GEMINI_FLASH_IMAGE_MODEL,
                     contents=prompt,
@@ -239,6 +267,7 @@ class StoryStreamService:
         max_attempts = 2
         for attempt in range(1, max_attempts + 1):
             try:
+                await self._wait_for_image_quota_window()
                 response = await client.aio.models.generate_content(
                     model=settings.GEMINI_FLASH_IMAGE_MODEL,
                     contents=prompt,

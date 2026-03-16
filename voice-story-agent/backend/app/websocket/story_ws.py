@@ -442,7 +442,37 @@ async def _page_generation_loop(
         except Exception:
             pass  # WebSocket may have closed during generation
 
+    async def _load_character_bible_with_retry() -> object | None:
+        last_bible = None
+        for delay in (0.0, 0.5, 1.0):
+            if delay:
+                await asyncio.sleep(delay)
+            try:
+                bible = await store.get_character_bible(session_id)
+            except Exception as exc:
+                logger.warning(
+                    "_page_generation_loop: get_character_bible failed "
+                    "(session=%s): %s",
+                    session_id,
+                    exc,
+                )
+                continue
+            if bible is not None:
+                return bible
+            last_bible = bible
+        return last_bible
+
     try:
+        current_bible = await _load_character_bible_with_retry()
+        if current_bible is None:
+            logger.error(
+                "_page_generation_loop: missing CharacterBible before generation "
+                "(session=%s)",
+                session_id,
+            )
+            await ws_emit("session_error", code="character_bible_missing")
+            return
+
         for page_number in range(1, 6):
             appended_current_page_history = False
             # Re-fetch session to get latest story_arc
@@ -469,6 +499,10 @@ async def _page_generation_loop(
 
             beat = session.story_arc[page_number - 1]
 
+            refreshed_bible = await _load_character_bible_with_retry()
+            if refreshed_bible is not None:
+                current_bible = refreshed_bible
+
             # T-031: clear interrupt flag before starting page narration
             loop_state.interrupt_event.clear()
             loop_state.in_steering_window = False
@@ -480,6 +514,7 @@ async def _page_generation_loop(
                     page_number=page_number,
                     beat=beat,
                     page_history=page_history,
+                    bible=current_bible,
                     emit=ws_emit,
                     ws=ws,
                     story_stream_svc=story_stream_svc,
@@ -522,10 +557,7 @@ async def _page_generation_loop(
                 try:
                     completed_page = await store.get_page(session_id, page_number)
                     if completed_page is not None and completed_page.text:
-                        snippet = " ".join(
-                            completed_page.text.split()[:25]
-                        )
-                        page_history.append(snippet)
+                        page_history.append(completed_page.text)
                         appended_current_page_history = True
                         # Persist to Session for reconnect recovery
                         await store.update_page_history(session_id, page_history)
@@ -614,6 +646,9 @@ async def _page_generation_loop(
                         refreshed = await store.get_session(session_id)
                         if refreshed.story_arc and len(refreshed.story_arc) >= page_number:
                             updated_beat = refreshed.story_arc[page_number - 1]
+                            latest_bible = await _load_character_bible_with_retry()
+                            if latest_bible is not None:
+                                current_bible = latest_bible
                             # Remove stale snippet for this page, then regenerate.
                             if appended_current_page_history and page_history:
                                 page_history.pop()
@@ -623,6 +658,7 @@ async def _page_generation_loop(
                                 page_number=page_number,
                                 beat=updated_beat,
                                 page_history=page_history,
+                                bible=current_bible,
                                 emit=ws_emit,
                                 ws=ws,
                                 story_stream_svc=story_stream_svc,
@@ -633,8 +669,7 @@ async def _page_generation_loop(
                             )
                             regenerated = await store.get_page(session_id, page_number)
                             if regenerated is not None and regenerated.text:
-                                snippet = " ".join(regenerated.text.split()[:25])
-                                page_history.append(snippet)
+                                page_history.append(regenerated.text)
                                 await store.update_page_history(session_id, page_history)
                     except Exception as exc:
                         logger.error(
